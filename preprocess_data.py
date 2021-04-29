@@ -43,7 +43,13 @@ def preprocess_data(pre_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\"):
     for PL_name in PL_names:
         print("The current PL is ", PL_name)
         PL_df = df[df["PL"] == PL_name].loc[:, :]
-        PL_df.to_csv(pre_dir + PL_name + ".csv", encoding="ISO-8859-1", index=False, mode='a')
+        PL_df.to_csv(pre_dir + "PL\\" + PL_name + ".csv", encoding="ISO-8859-1", index=False, mode='a')
+
+    for IssueTracking_name in sorted(set(df.IssueTracking.values.tolist())):
+        print("The current PL is ", IssueTracking_name)
+        PL_df = df[df["IssueTracking"] == IssueTracking_name].loc[:, :]
+        PL_df.to_csv(pre_dir + "IssueTracking\\" + IssueTracking_name + ".csv",
+                     encoding="ISO-8859-1", index=False, mode='a')
 
 
 if __name__ == '__main__':
