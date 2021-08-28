@@ -9,6 +9,10 @@ File: sub_AUC.py
 HomePage : http://github.com/yuanqingmei
 Email : dg1533019@smail.nju.edu.cn
 
+Notes:
+    (1) Compute the value of AUC, by Wilcoxon rank sum method using mannwhitneyu() from scipy.stats.mannwhitneyu,
+        after comparing scipy.stats.wilcoxon, scipy.stats.ranksums, and scipy.stats.mannwhitneyu.
+
 Outputs:
 (1) 第一个文件：对每个metric，列出它预测Buggy的auc及方差，和样本规模，可以供Comprehensive meta-analysis软件使用，进行auc的元分析;
 (2) 第二个文件：输出每个metric的auc的子组元分析（subgroup analysis）结果，注意其中使用了该metric与Buggy的Pearson相关系数的方向来
@@ -45,12 +49,14 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
     result_directory = result_dir
     os.chdir(working_dir)
 
-    def auc(metricData, defectData):
+    # Compute the AUC between metricData and metricData;
+    # When metricData is negatively related to metricData, the value of AUC is actually identical to 1 - AUC.
+    def auc_man(metricData, defectData):
         normalData = []
         abnormalData = []
-        print("len(metricData) = ", len(metricData))
+        # print("len(metricData) = ", len(metricData))
         for i in range(len(metricData)):
-            print(i, defectData[i])
+            # print(i, defectData[i])
             if metricData[i] == "und":
                 continue
             if defectData[i] > 0:
@@ -62,7 +68,11 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
         n1 = len(abnormalData)
 
         U1 = scipy.stats.mannwhitneyu(normalData, abnormalData)
-        RankSum = n0 * n1 + 0.5 * n0 * (n0 + 1) - U1[0]
+        # 2021/8/28: The formula of U1 is U1 = R1 - n1 * (n1 + 1) / 2 in scipy.stats.mannwhitneyu, which is identical to
+        # U2 actually. The correct formula of U1 is U1 = n1 * n2 + n1*(n1+1)/2 - R1. As it not revised in scipy 1.7.1,
+        # we use the alternative value as U1, namely len(normalData) * len(abnormalData) - U1[0].
+        # RankSum = n0 * n1 + 0.5 * n0 * (n0 + 1) - U1[0]
+        RankSum = n0 * n1 + 0.5 * n0 * (n0 + 1) - (n0 * n1 - U1[0])
 
         MW_U = RankSum - 0.5 * n0 * (n0 + 1)
         AUC = (n0 * n1 - MW_U) / (n0 * n1)
@@ -72,35 +82,55 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         variance = (AUC * (1 - AUC) + (n1 - 1) * (Q1 - AUC * AUC) + (n0 - 1) * (Q2 - AUC * AUC)) / (n0 * n1)
 
-        print("RankSum = ", RankSum)
-        print("n0 = ", n0)
-        print("n1 = ", n1)
-        print("metricData = ", metricData)
-        print("defectData = ", defectData)
-        print("normalData = ", normalData)
-        print("abnormalData = ", abnormalData)
-        print("AUC = ", AUC)
+        combined = np.array([metricData, defectData])
+        corr_pd = pd.DataFrame(combined.T, columns=['metric', 'defect'])
+        corr_matrix = corr_pd.corr(method='spearman')
+        corr = corr_matrix.loc["metric", "defect"]
+
+        if corr < 0:
+            AUC = 1 - AUC
+        print("repr of metricData is ", repr(metricData))
+        print("repr of defectData is ", type(defectData))
+        print("corr_pd is ", corr_pd)
+        print("corr_matrix is ", corr_matrix)
+        print("corr is ", corr)
+        print("type of corr_matrix is ", type(corr_matrix))
+        # print("RankSum = ", RankSum)
+        # print("U1 = ", U1)
+        # print("U1 = ", U1[0])
+        # print("n0 = ", n0)
+        # print("n1 = ", n1)
+        # print("metricData = ", metricData)
+        # print("defectData = ", defectData)
+        # print("normalData = ", normalData)
+        # print("abnormalData = ", abnormalData)
+        # print("AUC = ", AUC)
 
         if n0 * n1 < 1:
-            return 0, 0, 0, 0
+            return 0, 0, 0, 0, 0
         else:
-            return AUC, variance, (n0 + n1), n1
+            return AUC, variance, corr, (n0 + n1), n1
 
     x = [9, 5, 8, 7, 10, 6, 7]
     y = [7, 4, 5, 6, 3, 6, 4, 4]
+    males = [19, 22, 16, 29, 24]
+    females = [20, 11, 17, 12]
     print(scipy.stats.ranksums(x, y))
     print(scipy.stats.mannwhitneyu(x, y))
+    print(scipy.stats.mannwhitneyu(y, x))
     U1 = scipy.stats.mannwhitneyu(x, y)
     print(type(U1))
     print(repr(U1))
     print(U1[0])
     R = len(x) * len(y) + 0.5 * len(x) * (len(x) + 1) - U1[0]
     print("R = ", R)
+    print(scipy.stats.mannwhitneyu(males, females))
+    print(scipy.stats.mannwhitneyu(females, males))
 
-    # mm = [9, 5, 8, 7, 10, 6, 7, 7, 4, 5, 6, 3, 6, 4, 4]
+    mmm = [1, 2, 2, 1, 0, 2, 1, 7, 4, 5, 6, 3, 6, 4, 4]
     mm = [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0]
     cc = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
-    print(auc(mm, cc))
+    print(auc_man(mm, cc))
     auc_value = roc_auc_score(mm, cc)
     print(auc_value)
 
