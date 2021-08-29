@@ -33,8 +33,7 @@ import time
 
 
 def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
-            result_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson\\PearsonEffect\\",
-            training_list="List.txt"):
+            result_dir="F:\\NJU\\subMeta\\experiments\\subgroupMetaAnalysis\\"):
     import os
     import csv
     import scipy
@@ -46,6 +45,7 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
     pd.set_option('display.max_rows', None)
     pd.set_option('display.width', 5000)
 
+    working_directory = working_dir
     result_directory = result_dir
     os.chdir(working_dir)
 
@@ -89,50 +89,83 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         if corr < 0:
             AUC = 1 - AUC
-        print("repr of metricData is ", repr(metricData))
-        print("repr of defectData is ", type(defectData))
-        print("corr_pd is ", corr_pd)
-        print("corr_matrix is ", corr_matrix)
-        print("corr is ", corr)
-        print("type of corr_matrix is ", type(corr_matrix))
-        # print("RankSum = ", RankSum)
-        # print("U1 = ", U1)
-        # print("U1 = ", U1[0])
-        # print("n0 = ", n0)
-        # print("n1 = ", n1)
-        # print("metricData = ", metricData)
-        # print("defectData = ", defectData)
-        # print("normalData = ", normalData)
-        # print("abnormalData = ", abnormalData)
-        # print("AUC = ", AUC)
 
         if n0 * n1 < 1:
             return 0, 0, 0, 0, 0
         else:
             return AUC, variance, corr, (n0 + n1), n1
 
-    x = [9, 5, 8, 7, 10, 6, 7]
-    y = [7, 4, 5, 6, 3, 6, 4, 4]
-    males = [19, 22, 16, 29, 24]
-    females = [20, 11, 17, 12]
-    print(scipy.stats.ranksums(x, y))
-    print(scipy.stats.mannwhitneyu(x, y))
-    print(scipy.stats.mannwhitneyu(y, x))
-    U1 = scipy.stats.mannwhitneyu(x, y)
-    print(type(U1))
-    print(repr(U1))
-    print(U1[0])
-    R = len(x) * len(y) + 0.5 * len(x) * (len(x) + 1) - U1[0]
-    print("R = ", R)
-    print(scipy.stats.mannwhitneyu(males, females))
-    print(scipy.stats.mannwhitneyu(females, males))
+    PLs = ["cpp", "cs", "java", "c", "pascal"]
 
-    mmm = [1, 2, 2, 1, 0, 2, 1, 7, 4, 5, 6, 3, 6, 4, 4]
-    mm = [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0]
-    cc = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
-    print(auc_man(mm, cc))
-    auc_value = roc_auc_score(mm, cc)
-    print(auc_value)
+    for PL in PLs:
+        print("This is ", PL, " studies!")
+        with open(working_directory + PL + "\\" + PL + "_List.txt") as l:
+            lines = l.readlines()
+
+        for line in lines:
+            file = line.replace("\n", "")
+            print('the file is ', file)
+
+            with open(working_directory + PL + "\\" + file, 'r', encoding="ISO-8859-1") as f1, \
+                 open(result_directory + "AUC_MetaAnalysis_Data.csv", 'a+', encoding="utf-8", newline='') as f2, \
+                 open(result_directory + "AUC_MA_Data_deleted.csv", 'a+', encoding="utf-8", newline='') as deletedList:
+
+                reader = csv.reader(f1)
+                writer = csv.writer(f2)
+                writer_deletedList = csv.writer(deletedList)
+                # receives the first line of a file and convert to dict generator
+                fieldnames = next(reader)
+                # exclude the non metric fields
+                non_metric = ["Host", "Vcs", "Project", "File", "Buggy", "PL", "IssueTracking",
+                              "TLOC", "TNF", "TNC", "TND", "bug"]
+
+                # metric_data stores the metric fields (102 items)
+                def fun_1(m):
+                    return m if m not in non_metric else None
+
+                metric_data = filter(fun_1, fieldnames)
+
+                df = pd.read_csv(working_directory + PL + "\\" + file)
+                # drop all rows that have any NaN values,删除表中含有任何NaN的行,并重新设置行号
+                df = df.dropna(axis=0, how='any', inplace=False).reset_index(drop=True)
+
+                if os.path.getsize(result_directory + "AUC_MetaAnalysis_Data.csv") == 0:
+                    writer.writerow(["fileName", "metric", "Sample_size", "Spearman_metric_bug", "Pearson_metric_bug",
+                                     "Fisher_Z", "Fisher_Z_variance", "subGroup", "AUC", "Variance", "NumberOfBug",
+                                     "PercentOfBug", "LogOfBug"])
+
+                if os.path.getsize(result_directory + "AUC_MA_Data_deleted.csv") == 0:
+                    writer_deletedList.writerow(["fileName", "metric", "Sample_size", "Spearman_metric_bug",
+                                                 "Pearson_metric_bug", "Fisher_Z", "Fisher_Z_variance", "subGroup",
+                                                 "AUC", "Variance", "NumberOfBug", "PercentOfBug", "LogOfBug"])
+
+                for metric in metric_data:
+                    print("the current file is ", file, "the current metric is ", metric)
+
+                    Spearman_metric_bug = df.loc[:, [metric, 'bug']].corr('spearman')
+
+                    Spearman_value = Spearman_metric_bug[metric][1]
+                    # print("the Spearman_value is ", Spearman_value, type(Spearman_value), repr(Spearman_value))
+                    # print("the boolean is ", np.isnan(Spearman_value))
+                    Pearson_value = 2 * np.sin(np.pi * Spearman_value / 6)
+
+                    Sample_size = len(df[metric])
+                    print("The size of file is ", Sample_size)
+                    AUC = auc_man(df.loc[:, metric], df.loc[:, 'bug'])
+
+                    print("The AUC is ", AUC)
+
+                    if (Sample_size <= 3) or (Pearson_value == 1) or np.isnan(Spearman_value):
+                        Fisher_Z = 0
+                        Fisher_Z_variance = 0
+                        writer_deletedList.writerow([file, metric, Sample_size, Spearman_value, Pearson_value, Fisher_Z,
+                                                     Fisher_Z_variance, PL])
+                    else:
+                        Fisher_Z = 0.5 * np.log((1 + Pearson_value) / (1 - Pearson_value))
+                        Fisher_Z_variance = 1 / (Sample_size - 3)
+                        writer.writerow([file, metric, Sample_size, Spearman_value, Pearson_value, Fisher_Z,
+                                         Fisher_Z_variance, PL])
+                    break
 
 if __name__ == '__main__':
     s_time = time.time()
