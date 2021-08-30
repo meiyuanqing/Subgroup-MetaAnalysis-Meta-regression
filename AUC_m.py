@@ -7,6 +7,9 @@ Time: 21:10
 File: AUC_m.py
 HomePage : http://github.com/yuanqingmei
 Email : dg1533019@smail.nju.edu.cn
+
+The method of computing AUC value!
+
 """
 import time
 
@@ -31,7 +34,12 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
     def auc_man(metricData, defectData):
         normalData = []
         abnormalData = []
-        # print("len(metricData) = ", len(metricData))
+        # compute the Spearman coefficient between metricData and defectData
+        combined = np.array([metricData, defectData])
+        corr_pd = pd.DataFrame(combined.T, columns=['metric', 'defect'])
+        corr_matrix = corr_pd.corr(method='spearman')
+        corr = corr_matrix.loc["metric", "defect"]
+
         for i in range(len(metricData)):
             # print(i, defectData[i])
             if metricData[i] == "und":
@@ -43,6 +51,12 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         n0 = len(normalData)
         n1 = len(abnormalData)
+
+        # When all the modules in a system are defective or defect-free (i.e., the number of defects is all zero or
+        # all non-zero), no metric in the system can distinguish the defective or non-defective classes,
+        # and the value of AUC is 0.5 (i.e., the same as that predicted by the random model).
+        if n0 * n1 < 1:
+            return 0.5, 0, corr, (n0 + n1), n1
 
         U1 = scipy.stats.mannwhitneyu(normalData, abnormalData)
         # 2021/8/28: The formula of U1 is U1 = R1 - n1 * (n1 + 1) / 2 in scipy.stats.mannwhitneyu, which is identical to
@@ -59,18 +73,10 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         variance = (AUC * (1 - AUC) + (n1 - 1) * (Q1 - AUC * AUC) + (n0 - 1) * (Q2 - AUC * AUC)) / (n0 * n1)
 
-        combined = np.array([metricData, defectData])
-        corr_pd = pd.DataFrame(combined.T, columns=['metric', 'defect'])
-        corr_matrix = corr_pd.corr(method='spearman')
-        corr = corr_matrix.loc["metric", "defect"]
-
         if corr < 0:
             AUC = 1 - AUC
 
-        if n0 * n1 < 1:
-            return 0, 0, 0, 0, 0
-        else:
-            return AUC, variance, corr, (n0 + n1), n1
+        return AUC, variance, corr, (n0 + n1), n1
 
     x = [9, 5, 8, 7, 10, 6, 7]
     y = [7, 4, 5, 6, 3, 6, 4, 4]
@@ -114,9 +120,13 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
     mmm = [1, 2, 2, 1, 0, 2, 1, 7, 4, 5, 6, 3, 6, 4, 4]
     mm = [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0]
     ccc = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    mmmm = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    cccc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ccccc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # cc = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
-    print(auc_man(mm, ccc))
-    auc_value = roc_auc_score(mm, cc)
+    print(auc_man(cccc, mmmm))
+    auc_value = roc_auc_score(mmmm, mmmm)
+    # auc_value = roc_auc_score(mm, cccc)
     print(auc_value)
 
 if __name__ == '__main__':
