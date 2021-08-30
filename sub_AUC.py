@@ -54,7 +54,13 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
     def auc_man(metricData, defectData):
         normalData = []
         abnormalData = []
-        # print("len(metricData) = ", len(metricData))
+
+        # compute the Spearman coefficient between metricData and defectData
+        combined = np.array([metricData, defectData])
+        corr_pd = pd.DataFrame(combined.T, columns=['metric', 'defect'])
+        corr_matrix = corr_pd.corr(method='spearman')
+        corr = corr_matrix.loc["metric", "defect"]
+
         for i in range(len(metricData)):
             # print(i, defectData[i])
             if metricData[i] == "und":
@@ -66,6 +72,12 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         n0 = len(normalData)
         n1 = len(abnormalData)
+
+        # When all the modules in a system are defective or defect-free (i.e., the number of defects is all zero or
+        # all non-zero), no metric in the system can distinguish the defective or non-defective classes,
+        # and the value of AUC is 0.5 (i.e., the same as that predicted by the random model).
+        if n0 * n1 < 1:
+            return 0.5, 0, corr, (n0 + n1), n1
 
         U1 = scipy.stats.mannwhitneyu(normalData, abnormalData)
         # 2021/8/28: The formula of U1 is U1 = R1 - n1 * (n1 + 1) / 2 in scipy.stats.mannwhitneyu, which is identical to
@@ -82,18 +94,10 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
 
         variance = (AUC * (1 - AUC) + (n1 - 1) * (Q1 - AUC * AUC) + (n0 - 1) * (Q2 - AUC * AUC)) / (n0 * n1)
 
-        combined = np.array([metricData, defectData])
-        corr_pd = pd.DataFrame(combined.T, columns=['metric', 'defect'])
-        corr_matrix = corr_pd.corr(method='spearman')
-        corr = corr_matrix.loc["metric", "defect"]
-
         if corr < 0:
             AUC = 1 - AUC
 
-        if n0 * n1 < 1:
-            return 0, 0, 0, 0, 0
-        else:
-            return AUC, variance, corr, (n0 + n1), n1
+        return AUC, variance, corr, (n0 + n1), n1
 
     PLs = ["cpp", "cs", "java", "c", "pascal"]
 
@@ -107,8 +111,9 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
             print('the file is ', file)
 
             with open(working_directory + PL + "\\" + file, 'r', encoding="ISO-8859-1") as f1, \
-                 open(result_directory + "AUC_MetaAnalysis_Data.csv", 'a+', encoding="utf-8", newline='') as f2, \
-                 open(result_directory + "AUC_MA_Data_deleted.csv", 'a+', encoding="utf-8", newline='') as deletedList:
+                    open(result_directory + "AUC_MetaAnalysis_Data.csv", 'a+', encoding="utf-8", newline='') as f2, \
+                    open(result_directory + "AUC_MA_Data_deleted.csv", 'a+', encoding="utf-8",
+                         newline='') as deletedList:
 
                 reader = csv.reader(f1)
                 writer = csv.writer(f2)
@@ -154,18 +159,26 @@ def sub_AUC(working_dir="F:\\NJU\\subMeta\\experiments\\preprocess\\PL\\",
                     AUC = auc_man(df.loc[:, metric], df.loc[:, 'bug'])
 
                     print("The AUC is ", AUC)
+                    AUC_value = AUC[0]
+                    AUC_variance = AUC[1]
+                    NumberOfBug = AUC[4]
+                    PercentOfBug = AUC[4] / AUC[3]
+                    LogOfBug = np.log(1 + AUC[4])
 
                     if (Sample_size <= 3) or (Pearson_value == 1) or np.isnan(Spearman_value):
                         Fisher_Z = 0
                         Fisher_Z_variance = 0
                         writer_deletedList.writerow([file, metric, Sample_size, Spearman_value, Pearson_value, Fisher_Z,
-                                                     Fisher_Z_variance, PL])
+                                                     Fisher_Z_variance, PL, AUC_value, AUC_variance, NumberOfBug,
+                                                     PercentOfBug, LogOfBug])
                     else:
                         Fisher_Z = 0.5 * np.log((1 + Pearson_value) / (1 - Pearson_value))
                         Fisher_Z_variance = 1 / (Sample_size - 3)
                         writer.writerow([file, metric, Sample_size, Spearman_value, Pearson_value, Fisher_Z,
-                                         Fisher_Z_variance, PL])
+                                         Fisher_Z_variance, PL, AUC_value, AUC_variance, NumberOfBug, PercentOfBug,
+                                         LogOfBug])
                     break
+
 
 if __name__ == '__main__':
     s_time = time.time()
