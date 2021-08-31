@@ -123,7 +123,7 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
             I2 = ((Q - df) / Q) * 100  # Higgins et al. (2003) proposed using a statistic, I2,
             # the proportion of the observed variance reflects real differences in effect size
         if I2 < 0:
-            I2 = 0        # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
+            I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
 
         pValue_Q = 1.0 - stats.chi2.cdf(Q, df)  # pValue_Q = 1.0 - stats.chi2.cdf(chisquare, freedom_degree)
 
@@ -132,9 +132,13 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
         d["stdError"] = randomStdError
         d["LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits for the summary effect
         d["UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits for the summary effect
+        # 20210719 adds the 84% CI for the summary effect
+        d["LL_CI_84"] = randomMean - 1.4051 * randomStdError  # The 84% lower limits for the summary effect
+        d["UL_CI_84"] = randomMean + 1.4051 * randomStdError  # The 84% upper limits for the summary effect
+
         d["ZValue"] = randomMean / randomStdError  # a Z-value to test the null hypothesis that the mean effect is zero
         d["pValue_Z"] = 2 * (1 - norm.cdf(np.abs(randomMean / randomStdError)))  # norm.cdf() 返回标准正态累积分布函数值
-                                                                             # 20210414 双侧检验时需要增加绝对值符号np.abs
+        # 20210414 双侧检验时需要增加绝对值符号np.abs
         d["Q"] = Q
         d["df"] = df
         d["pValue_Q"] = pValue_Q
@@ -304,9 +308,8 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
     PLs = ["cpp", "cs", "java", "c", "pascal"]
 
     for PL in PLs:
+
         print("This is ", PL, " studies!")
-        # with open(working_directory + "PearsonEffect\\" + PL + "\\" + PL + "_List.txt") as l:
-        #     lines = l.readlines()
 
         # read_csv(path, keep_default_na=False, na_values=[""])  只有一个空字段将被识别为NaN
         df = pd.read_csv(working_directory + "PearsonEffect\\" + PL + "\\" + "Pearson_effects.csv",
@@ -321,16 +324,8 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
         for metric in metric_names:
 
             print("the current metric is ", metric)
-
             FisherZ_effect_size = df[df["metric"] == metric].loc[:, "Fisher_Z"].astype(float)
-            # print("the FisherZ_effect_size items are ", FisherZ_effect_size)
-            # print("the type FisherZ_effect_size items are ", type(FisherZ_effect_size))
-            # print("the len of FisherZ_effect_size items is ", len(FisherZ_effect_size))
-
             FisherZ_variance = df[df["metric"] == metric].loc[:, "Fisher_Z_variance"].astype(float)
-            # print("the threshold_variance items are ", FisherZ_variance)
-            # print("the type threshold_variance items are ", type(FisherZ_variance))
-            # print("the len of threshold_variance items is ", len(FisherZ_variance))
 
             metaThreshold = pd.DataFrame()
             metaThreshold['EffectSize'] = FisherZ_effect_size
@@ -338,7 +333,6 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
             try:
                 resultMetaAnalysis = random_effect_meta_analysis(np.array(metaThreshold.loc[:, "EffectSize"]),
                                                                  np.array(metaThreshold.loc[:, "Variance"]))
-
                 # d["LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits for the summary effect
                 # d["UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits for the summary effect
                 meta_stdError = (inverse_Fisher_Z(resultMetaAnalysis["UL_CI"])
@@ -347,7 +341,7 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
                 adjusted_result = trimAndFill(np.array(metaThreshold.loc[:, "EffectSize"]),
                                               np.array(metaThreshold.loc[:, "Variance"]), 0)
                 meta_stdError_adjusted = (inverse_Fisher_Z(adjusted_result["UL_CI"])
-                                 - inverse_Fisher_Z(adjusted_result["LL_CI"])) / (1.96 * 2)
+                                          - inverse_Fisher_Z(adjusted_result["LL_CI"])) / (1.96 * 2)
                 if resultMetaAnalysis["pValue_Z"] > 0.5:
                     direction = 0
                 else:
@@ -361,25 +355,29 @@ def pearson_sub_meta(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupPearson
                     if os.path.getsize(working_directory + "Pearson_effects_sub_meta.csv") == 0:
                         writer_f.writerow(
                             ["subgroup", "metric", "Pearson_effects_meta", "Pearson_effects_meta_stdError", "LL_CI",
-                             "UL_CI", "ZValue", "pValue_Z", "Q", "df", "pValue_Q", "I2", "tau", "LL_ndPred",
-                             "UL_ndPred", "number_of_effect_size",
-                             "k_0", "Pearson_effects_meta_adjusted", "Pearson_effects_meta_stdError_adjusted",
-                             "LL_CI_adjusted", "UL_CI_adjusted", "direction", "pValue_Z_adjusted", "Q_adjusted",
+                             "UL_CI", "LL_CI_84", "UL_CI_84", "ZValue", "pValue_Z", "Q", "df", "pValue_Q", "I2", "tau",
+                             "LL_ndPred", "UL_ndPred", "number_of_effect_size", "k_0", "Pearson_effects_meta_adjusted",
+                             "Pearson_effects_meta_stdError_adjusted", "LL_CI_adjusted", "UL_CI_adjusted",
+                             "LL_CI_84_adjusted", "UL_CI_84_adjusted", "direction", "pValue_Z_adjusted", "Q_adjusted",
                              "df_adjusted", "pValue_Q_adjusted", "I2_adjusted", "tau_adjusted", "LL_ndPred_adjusted",
                              "UL_ndPred_adjusted"])
                     writer_f.writerow([PL, metric, inverse_Fisher_Z(resultMetaAnalysis["mean"]), meta_stdError,
                                        inverse_Fisher_Z(resultMetaAnalysis["LL_CI"]),
                                        inverse_Fisher_Z(resultMetaAnalysis["UL_CI"]),
+                                       inverse_Fisher_Z(resultMetaAnalysis["LL_CI_84"]),
+                                       inverse_Fisher_Z(resultMetaAnalysis["UL_CI_84"]),
                                        resultMetaAnalysis["ZValue"], resultMetaAnalysis["pValue_Z"],
-                                       resultMetaAnalysis["Q"], resultMetaAnalysis["df"], resultMetaAnalysis["pValue_Q"],
-                                       resultMetaAnalysis["I2"], resultMetaAnalysis["tau"],
-                                       inverse_Fisher_Z(resultMetaAnalysis["LL_ndPred"]),
+                                       resultMetaAnalysis["Q"], resultMetaAnalysis["df"],
+                                       resultMetaAnalysis["pValue_Q"], resultMetaAnalysis["I2"],
+                                       resultMetaAnalysis["tau"], inverse_Fisher_Z(resultMetaAnalysis["LL_ndPred"]),
                                        inverse_Fisher_Z(resultMetaAnalysis["UL_ndPred"]), len(FisherZ_effect_size),
                                        adjusted_result["k0"], inverse_Fisher_Z(adjusted_result["mean"]),
                                        meta_stdError_adjusted, inverse_Fisher_Z(adjusted_result["LL_CI"]),
-                                       inverse_Fisher_Z(adjusted_result["UL_CI"]), direction,
-                                       adjusted_result["pValue_Z"],
-                                       adjusted_result["Q"], adjusted_result["df"], adjusted_result["pValue_Q"],
+                                       inverse_Fisher_Z(adjusted_result["UL_CI"]),
+                                       inverse_Fisher_Z(adjusted_result["LL_CI_84"]),
+                                       inverse_Fisher_Z(adjusted_result["UL_CI_84"]),
+                                       direction, adjusted_result["pValue_Z"], adjusted_result["Q"],
+                                       adjusted_result["df"], adjusted_result["pValue_Q"],
                                        adjusted_result["I2"], adjusted_result["tau"],
                                        inverse_Fisher_Z(adjusted_result["LL_ndPred"]),
                                        inverse_Fisher_Z(adjusted_result["UL_ndPred"])])
