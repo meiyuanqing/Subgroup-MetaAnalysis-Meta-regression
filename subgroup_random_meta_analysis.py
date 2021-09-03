@@ -14,8 +14,6 @@ According to M.Borenstein et. al,[1] (p164), perform subgroup meta-analysis usin
 References:
 [1] M.Borenstein, L.V. Hedges, J.P.T. Higgins, H.R. Rothstein. Introduction to meta-analysis, John Wiley & Sons, 2009;
 """
-import time
-import pandas as pd
 
 
 # input: two anonymous arrays, namely effect_size stores each study's effect size and its variance
@@ -23,6 +21,7 @@ import pandas as pd
 #         (1) randomMean：the average of effect sizes;
 #         (2) randomStdError: the standard error corresponding to the average of effect sizes.
 def random_effect_meta_analysis(effect_size, variance):
+
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
     # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
     from scipy import stats
@@ -122,7 +121,8 @@ def random_effect_meta_analysis(effect_size, variance):
 #         (3) other summary statistics in page 167 of M.Borenstein et. al [1];
 #         (4) the results of Q -test based on analysis of variance, which is identical to Q -test for heterogeneity;
 #         (5) quantify the magnitude of the difference.(page 160 of M.Borenstein et. al [1])
-def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
+def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_subgroup):
+
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
     # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
     from scipy import stats
@@ -130,12 +130,12 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
     import pandas as pd
 
     d = {}  # return a dict of meta-analysis results, including each subgroup, separate, and pooled estimate tau-squared
-    subgroups = sorted(set(subgroup))
+    subgroups = sorted(set(effect_subgroup))
     # subgroups = sorted(set(subgroup.tolist()))
     print("the subgroups are ", subgroups)
     dic = {"effect_size": effect_size,
-           "effect_size_variance": variance,
-           "effect_size_subgroup": subgroup}
+           "effect_size_variance": effect_variance,
+           "effect_size_subgroup": effect_subgroup}
 
     df_effect_size = pd.DataFrame(dic)
 
@@ -157,7 +157,6 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
 
     for subgroup in subgroups:
 
-        print("the current subgroup is ", subgroup)
         sum_Wi = 0
         sum_WiWi = 0
         sum_WiYi = 0  # Sum(Wi*Yi), where i ranges from 1 to k, and k is the number of studies
@@ -172,8 +171,7 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
                    "effect_size_variance"].values.tolist()
         study_number = len(variance)
 
-        print("the study_number is ", study_number)
-        print("the variance is ", variance)
+        print("the current subgroup is ", subgroup, ". the study_number is ", study_number)
 
         fixed_weight = [0 for i in range(study_number)]
         random_weight = [0 for i in range(study_number)]
@@ -202,9 +200,8 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
         df = study_number - 1
         C = sum_Wi - sum_WiWi / sum_Wi
 
-        print("The sum_WiYiYi value is ", sum_WiYiYi, ". The sum_WiYi value is ", sum_WiYi)
-        print("The sum_Wi value is ", sum_Wi, ". The sum_WiWi value is ", sum_WiWi)
-        print("The Q value is ", Q, ". The C value is ", C)
+        print("The sum_WiYiYi value is ", sum_WiYiYi, ". The sum_WiYi value is ", sum_WiYi, ". The sum_Wi value is ",
+              sum_Wi, ". The sum_WiWi value is ", sum_WiWi, ". The Q value is ", Q, ". The C value is ", C)
 
         pooled_Q = pooled_Q + sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
         pooled_df = pooled_df + study_number - 1
@@ -229,8 +226,8 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
             separate_sum_Wistar = separate_sum_Wistar + random_weight[i_s]
             separate_sum_WistarYi = separate_sum_WistarYi + random_weight[i_s] * effect_size[i_s]
 
-        randomMean = sum_WistarYi / sum_Wistar  # 随机模型元分析后得到的效应平均值
-        randomStdError = (1 / sum_Wistar) ** 0.5  # 随机模型元分析的效应平均值对应的标准错
+        randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup
+        randomStdError = (1 / sum_Wistar) ** 0.5  # standard error for average effect size of each subgroup
         # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
         if study_number == 1:
             I2 = 0
@@ -268,10 +265,10 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
         # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
         # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
         d[subgroup + "_LL_tdPred"] = randomMean - stats.t.ppf(0.975, df) * (
-                    (T2 + randomStdError * randomStdError) ** 0.5)
+                (T2 + randomStdError * randomStdError) ** 0.5)
         # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
         d[subgroup + "_UL_tdPred"] = randomMean + stats.t.ppf(0.975, df) * (
-                    (T2 + randomStdError * randomStdError) ** 0.5)
+                (T2 + randomStdError * randomStdError) ** 0.5)
 
         fixedMean = sum_WiYi / sum_Wi  # 固定模型元分析后得到的效应平均值
         fixedStdError = (1 / sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
@@ -295,7 +292,7 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
         sum_WistarYi = 0
 
         effect_size = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
-                   "effect_size"].values.tolist()
+                      "effect_size"].values.tolist()
         variance = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
                    "effect_size_variance"].values.tolist()
         study_number = len(variance)
@@ -353,7 +350,8 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
     if pooled_I2 < 0:
         pooled_I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
 
-    pooled_pValue_Q = 1.0 - stats.chi2.cdf(pooled_Q, pooled_df)  # pValue_Q = 1.0 - stats.chi2.cdf(chisquare, freedom_degree)
+    pooled_pValue_Q = 1.0 - stats.chi2.cdf(pooled_Q,
+                                           pooled_df)  # pValue_Q = 1.0 - stats.chi2.cdf(chisquare, freedom_degree)
 
     d["pooled_C"] = pooled_C
     d["pooled_mean"] = pooled_randomMean
@@ -379,10 +377,10 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
     # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
     d["pooled_LL_tdPred"] = pooled_randomMean - stats.t.ppf(0.975, pooled_df) \
-                              * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
+                            * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
     # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     d["pooled_UL_tdPred"] = pooled_randomMean + stats.t.ppf(0.975, pooled_df) \
-                              * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
+                            * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
 
     pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # 固定模型元分析后得到的效应平均值
     pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
@@ -450,12 +448,15 @@ def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
     d['separate_fixedMean'] = separate_fixedMean
     d['separate_fixedStdError'] = separate_fixedStdError
 
-    print("the separate_d is ", d)
-
     return d
 
 
 if __name__ == '__main__':
+    import os
+    import sys
+    import time
+    import pandas as pd
+
     working_directory = "F:\\NJU\\subMeta\\experiments\\subgroupPearson\\"
     s_time = time.time()
     df = pd.read_csv(working_directory + "LOCsubgroup.csv", keep_default_na=False, na_values=[""])
@@ -469,10 +470,11 @@ if __name__ == '__main__':
     effect_size_A = [0.11, 0.224, 0.338, 0.451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
     variance_A = [0.01, 0.03, 0.02, 0.015, 0.01, 0.015, 0.02, 0.015, 0.025, 0.012]
     subgroup = ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"]
-    subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
-
+    subgroup_results = subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
+    print("the subgroup_results is ", subgroup_results)
+    for s in subgroup_results:
+        print(s, subgroup_results[s])
     e_time = time.time()
     execution_time = e_time - s_time
 
-    print("The __name__ is ", __name__, ". This is end of subgroup_random_meta_analysis.py! ",
-          "And the elapsed time is ", execution_time, " s.")
+    print("The __name__ is ", __name__, ". This", os.path.basename(sys.argv[0]), "ended within", execution_time, "(s).")
