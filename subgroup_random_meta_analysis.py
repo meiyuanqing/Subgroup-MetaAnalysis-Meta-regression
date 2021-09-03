@@ -4,7 +4,7 @@
 Author : Yuanqing Mei
 Date : 2021/8/31
 Time: 15:45
-File: separate_tau_subgroup_random_meta_analysis.py
+File: subgroup_random_meta_analysis.py
 HomePage : http://github.com/yuanqingmei
 Email : dg1533019@smail.nju.edu.cn
 
@@ -120,9 +120,9 @@ def random_effect_meta_analysis(effect_size, variance):
 #         (1) randomMean of all subgroup：the average of effect sizes;
 #         (2) randomStdError of all subgroup: the standard error corresponding to the average of effect sizes;
 #         (3) other summary statistics in page 167 of M.Borenstein et. al [1];
-#         (4) the results of Q -test based on analysis of variance;
-#         (5) the results of Q -test for heterogeneity.
-def separate_tau_subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
+#         (4) the results of Q -test based on analysis of variance, which is identical to Q -test for heterogeneity;
+#         (5) quantify the magnitude of the difference.(page 160 of M.Borenstein et. al [1])
+def subgroup_random_effect_meta_analysis(effect_size, variance, subgroup):
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
     # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
     from scipy import stats
@@ -166,13 +166,15 @@ def separate_tau_subgroup_random_effect_meta_analysis(effect_size, variance, sub
         sum_Wistar = 0
         sum_WistarYi = 0
 
+        effect_size = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
+                      "effect_size"].values.tolist()
         variance = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
                    "effect_size_variance"].values.tolist()
         study_number = len(variance)
 
         print("the study_number is ", study_number)
         print("the variance is ", variance)
-        print("the type of variance is ", type(variance))
+
         fixed_weight = [0 for i in range(study_number)]
         random_weight = [0 for i in range(study_number)]
 
@@ -190,10 +192,18 @@ def separate_tau_subgroup_random_effect_meta_analysis(effect_size, variance, sub
             pooled_sum_WiYi = pooled_sum_WiYi + effect_size[i] * fixed_weight[i]
             pooled_sum_WiYiYi = pooled_sum_WiYiYi + fixed_weight[i] * effect_size[i] * effect_size[i]
 
+            # print("the effect size is ", effect_size[i])
+            # print("The Wi value is ", fixed_weight[i],
+            #       ". The WiYi value is ", effect_size[i] * fixed_weight[i],
+            #       ". The WiYiYi value is ", fixed_weight[i] * effect_size[i] * effect_size[i],
+            #       ". The WiWi value is ", fixed_weight[i] * fixed_weight[i])
+
         Q = sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
         df = study_number - 1
         C = sum_Wi - sum_WiWi / sum_Wi
 
+        print("The sum_WiYiYi value is ", sum_WiYiYi, ". The sum_WiYi value is ", sum_WiYi)
+        print("The sum_Wi value is ", sum_Wi, ". The sum_WiWi value is ", sum_WiWi)
         print("The Q value is ", Q, ". The C value is ", C)
 
         pooled_Q = pooled_Q + sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
@@ -284,13 +294,16 @@ def separate_tau_subgroup_random_effect_meta_analysis(effect_size, variance, sub
         sum_Wistar = 0
         sum_WistarYi = 0
 
+        effect_size = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
+                   "effect_size"].values.tolist()
         variance = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
                    "effect_size_variance"].values.tolist()
         study_number = len(variance)
 
         print("the study_number is ", study_number)
+        print("the effect_size is ", effect_size)
         print("the variance is ", variance)
-        print("the type of variance is ", type(variance))
+
         fixed_weight = [0 for i in range(study_number)]
         random_weight = [0 for i in range(study_number)]
 
@@ -450,16 +463,16 @@ if __name__ == '__main__':
     FisherZ_effect_size = df[df["metric"] == "LOC"].loc[:, "Fisher_Z"].astype(float)
     FisherZ_variance = df[df["metric"] == "LOC"].loc[:, "Fisher_Z_variance"].astype(float)
     FisherZ_subgroup = df[df["metric"] == "LOC"].loc[:, "subgroup"]
-    # separate_tau_subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
+    # subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
 
     # P173 Table 19.10
-    effect_size_A = [0.11, 0.224, 0.338, 0.0451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
+    effect_size_A = [0.11, 0.224, 0.338, 0.451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
     variance_A = [0.01, 0.03, 0.02, 0.015, 0.01, 0.015, 0.02, 0.015, 0.025, 0.012]
     subgroup = ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"]
-    separate_tau_subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
+    subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
 
     e_time = time.time()
     execution_time = e_time - s_time
 
-    print("The __name__ is ", __name__, ". This is end of separate_tau_subgroup_random_meta_analysis.py! ",
+    print("The __name__ is ", __name__, ". This is end of subgroup_random_meta_analysis.py! ",
           "And the elapsed time is ", execution_time, " s.")
