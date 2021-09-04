@@ -141,9 +141,15 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     pooled_sum_WiYi = 0  # Sum(Wi*Yi), where i ranges from 1 to k, and k is the number of studies of all subgroups
     pooled_sum_WiYiYi = 0  # Sum(Wi*Yi*Yi), where i ranges from 1 to k, and k is the number of studies of all subgroups
 
+    # tau-squared-within is computed using fixed effect's Q, df, and c.
     pooled_Q = 0
     pooled_df = 0
     pooled_C = 0
+
+    # used for Q-test for separate estimate tau
+    pooled_Q_separate = 0
+    # used for Q-test for pooled estimate tau
+    pooled_Q_pooled = 0
 
     separate_sum_Wistar = 0
     separate_sum_WistarWistar = 0
@@ -221,10 +227,11 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         df_subgroup = study_number - 1
         C_subgroup = sum_Wistar - sum_WistarWistar / sum_Wistar
 
+        # Q-test for separate estimate tau subgroup random effect meta-analysis
+        pooled_Q_separate = pooled_Q_separate + Q_subgroup
+        # pooled_df_separate = pooled_df + df_subgroup
+        # pooled_C_separate = pooled_C + C_subgroup
         # tau-squared-within is computed using fixed effect's Q, df, and c.
-        # pooled_Q = pooled_Q + Q_subgroup
-        # pooled_df = pooled_df + df_subgroup
-        # pooled_C = pooled_C + C_subgroup
         pooled_Q = pooled_Q + Q
         pooled_df = pooled_df + df
         pooled_C = pooled_C + C
@@ -338,6 +345,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         df_subgroup = study_number - 1
         C_subgroup = sum_Wistar - sum_WistarWistar / sum_Wistar
 
+        # Q-test for pooled estimate tau subgroup random effect meta-analysis
+        pooled_Q_pooled = pooled_Q_pooled + Q_subgroup
+
         print("The separate_sum_WistarYiYi value is ", separate_sum_WistarYiYi, ". The separate_sum_WistarYi value is ",
               separate_sum_WistarYi, ". The separate_sum_Wistar value is ", separate_sum_Wistar,
               ". The separate_sum_WistarWistar value is ", separate_sum_WistarWistar, ". The Q_subgroup value is ",
@@ -443,23 +453,37 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_UL_tdPred"] = pooled_randomMean + stats.t.ppf(0.975, pooled_df) \
                             * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
 
-    # a Q-test based on analysis of variance, which is identical to Z test and Q-test based on heterogeneity
-    # Q_total = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wistar
-    Q_total = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
-    Q_within = pooled_Q
-    Q_between = Q_total - Q_within
-    df_between = len(subgroups) - 1
-    pValue_Q_between = 1.0 - stats.chi2.cdf(Q_between, df_between)
+    # Q-test for separate estimate tau: a Q-test based on analysis of variance, which is identical to Z test and Q-test
+    # based on heterogeneity. Q_total = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wistar
+    Q_total_separate = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
+    Q_within_separate = pooled_Q_separate
+    Q_between_separate = Q_total_separate - Q_within_separate
+    df_between_separate = len(subgroups) - 1
+    pValue_Q_between_separate = 1.0 - stats.chi2.cdf(Q_between_separate, df_between_separate)
 
-    d["Q-test_ANOVA"] = pValue_Q_between
-    d["Q-test_Q_total"] = Q_total
-    d["Q-test_Q_within"] = Q_within
-    d["Q-test_Q_between"] = Q_between
-    d["Q-test_df_between"] = df_between
-    d["Q-test_pValue_Q_between"] = pValue_Q_between
+    d["Q-test_separate_ANOVA"] = pValue_Q_between_separate
+    d["Q-test_separate_Q_total"] = Q_total_separate
+    d["Q-test_separate_Q_within"] = Q_within_separate
+    d["Q-test_separate_Q_between"] = Q_between_separate
+    d["Q-test_separate_df_between"] = df_between_separate
+    d["Q-test_separate_pValue_Q_between"] = pValue_Q_between_separate
+
+    # Q-test for pooled estimate tau
+    Q_total_pooled = pooled_sum_WistarYiYi - pooled_sum_WistarYi * pooled_sum_WistarYi / pooled_sum_Wistar
+    Q_within_pooled = pooled_Q_pooled
+    Q_between_pooled = Q_total_pooled - Q_within_pooled
+    df_between_pooled = len(subgroups) - 1
+    pValue_Q_between = 1.0 - stats.chi2.cdf(Q_between_pooled, df_between_pooled)
+
+    d["Q-test_pooled_ANOVA"] = pValue_Q_between
+    d["Q-test_pooled_Q_total"] = Q_total_pooled
+    d["Q-test_pooled_Q_within"] = Q_within_pooled
+    d["Q-test_pooled_Q_between"] = Q_between_pooled
+    d["Q-test_pooled_df_between"] = df_between_pooled
+    d["Q-test_pooled_pValue_Q_between"] = pValue_Q_between
 
     # Compute the separate estimate tau-squared：M.Borenstein[2009] P179 did not report the statistic
-    separate_Q = Q_total
+    separate_Q = Q_total_pooled
     separate_df = len(effect_size) - 1
     separate_C = separate_sum_Wistar - separate_sum_WistarWistar / separate_sum_Wistar
     separate_T2 = (separate_Q - separate_df) / separate_C  # sample estimate of tau squared
@@ -530,8 +554,6 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
                     1 - norm.cdf(np.abs(Diff_star_separate / SE_Diff_star_separate)))
 
             # Z-test for pooled estimate tau
-            # d["pooled_" + subgroup_pooled + "_mean"] = randomMean
-            # d["pooled_" + subgroup_pooled + "_variance"] = randomVariance
             Diff_star_pooled = d["pooled_" + non_s_Z + "_mean"] - d["pooled_" + s_Z + "_mean"]
             SE_Diff_star_pooled = (d["pooled_" + non_s_Z + "_variance"] + d["pooled_" + s_Z + "_variance"]) ** 0.5
 
@@ -560,7 +582,7 @@ if __name__ == '__main__':
     FisherZ_effect_size = df[df["metric"] == "LOC"].loc[:, "Fisher_Z"].astype(float)
     FisherZ_variance = df[df["metric"] == "LOC"].loc[:, "Fisher_Z_variance"].astype(float)
     FisherZ_subgroup = df[df["metric"] == "LOC"].loc[:, "subgroup"]
-    # subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
+    # subgroup_results = subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
 
     # P173 Table 19.10
     effect_size_A = [0.11, 0.224, 0.338, 0.451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
