@@ -220,9 +220,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         df_subgroup = study_number - 1
         C_subgroup = sum_Wistar - sum_WistarWistar / sum_Wistar
 
-        pooled_Q = pooled_Q + sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
-        pooled_df = pooled_df + study_number - 1
-        pooled_C = pooled_C + sum_Wi - sum_WiWi / sum_Wi
+        pooled_Q = pooled_Q + Q_subgroup
+        pooled_df = pooled_df + df_subgroup
+        pooled_C = pooled_C + C_subgroup
 
         print("The separate_sum_WistarYiYi value is ", separate_sum_WistarYiYi, ". The separate_sum_WistarYi value is ",
               separate_sum_WistarYi, ". The separate_sum_Wistar value is ", separate_sum_Wistar,
@@ -230,6 +230,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
               Q_subgroup, ". The C_subgroup value is ", C_subgroup)
 
         randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup for separate estimate tau
+        randomVariance = 1 / sum_Wistar  # variance for average effect size of each subgroup
         randomStdError = (1 / sum_Wistar) ** 0.5  # standard error for average effect size of each subgroup
         # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
         # the proportion of the observed variance reflects real differences in effect size
@@ -243,6 +244,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         pValue_Q = 1.0 - stats.chi2.cdf(Q_subgroup, df_subgroup)
 
         d["separate_" + subgroup + "_mean"] = randomMean
+        d["separate_" + subgroup + "_variance"] = randomVariance
         d["separate_" + subgroup + "_stdError"] = randomStdError
         d["separate_" + subgroup + "_LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits
         d["separate_" + subgroup + "_UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits
@@ -279,6 +281,8 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     tau_squared_within = (pooled_Q - pooled_df) / pooled_C  # sample estimate of tau squared
     if tau_squared_within < 0:
         tau_squared_within = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
+
+    print("the tau_squared_within is ", tau_squared_within)
 
     for subgroup_pooled in subgroups:
 
@@ -322,6 +326,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
               Q_subgroup, ". The C_subgroup value is ", C_subgroup)
 
         randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup for separate estimate tau
+        randomVariance = 1 / sum_Wistar  # variance for average effect size of each subgroup
         randomStdError = (1 / sum_Wistar) ** 0.5  # standard error for average effect size of each subgroup
         # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
         # the proportion of the observed variance reflects real differences in effect size
@@ -335,7 +340,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         pValue_Q = 1.0 - stats.chi2.cdf(Q_subgroup, df_subgroup)
 
         d["pooled_" + subgroup_pooled + "_mean"] = randomMean
-        d["pooled_" + subgroup_pooled + "_stdError"] = randomStdError
+        d["pooled_" + subgroup_pooled + "_variance"] = randomVariance
         d["pooled_" + subgroup_pooled + "_LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits
         d["pooled_" + subgroup_pooled + "_UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits
         # 20210719 adds the 84% CI for the summary effect
@@ -362,8 +367,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         d["pooled_" + subgroup_pooled + "_UL_tdPred"] = randomMean + stats.t.ppf(0.975, df_subgroup) * (
                 (T2 + randomStdError * randomStdError) ** 0.5)
 
-    pooled_randomMean = pooled_sum_WistarYi / pooled_sum_Wistar  # 随机模型元分析后得到的效应平均值
-    pooled_randomStdError = (1 / pooled_sum_Wistar) ** 0.5  # 随机模型元分析的效应平均值对应的标准错
+    pooled_randomMean = pooled_sum_WistarYi / pooled_sum_Wistar
+    pooled_randomVariance = 1 / pooled_sum_Wistar
+    pooled_randomStdError = (1 / pooled_sum_Wistar) ** 0.5
 
     # When there is only one study in the meta-analysis, there is no between-study variance, so it set to 0.
     if study_number == 1:
@@ -385,6 +391,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     pooled_pValue_Q = 1.0 - stats.chi2.cdf(pooled_Q, pooled_df)
 
     d["pooled_mean"] = pooled_randomMean
+    d["pooled_Variance"] = pooled_randomVariance
     d["pooled_stdError"] = pooled_randomStdError
     d["pooled_LL_CI"] = pooled_randomMean - 1.96 * pooled_randomStdError  # The 95% lower limits
     d["pooled_L_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
@@ -419,7 +426,8 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     print("the pooled_sum_Wi is ", pooled_sum_Wistar)
     # a Q-test based on analysis of variance, which is identical to Z test and Q-test based on heterogeneity
-    Q_total = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wistar
+    # Q_total = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wistar
+    Q_total = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
     Q_within = pooled_Q
     Q_between = Q_total - Q_within
     df_between = len(subgroups) - 1
@@ -429,26 +437,31 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["Q-test_Q_total"] = Q_total
     d["Q-test_Q_within"] = Q_within
     d["Q-test_Q_between"] = Q_between
+    d["Q-test_df_between"] = df_between
+    d["Q-test_pValue_Q_between"] = pValue_Q_between
 
     # Quantify the magnitude of the difference
 
     # Compute the separate estimate tau-squared：M.Borenstein[2009] P179 did not report the statistic
-    separate_T2 = (pooled_Q - pooled_df) / pooled_C  # sample estimate of tau squared
+    separate_Q = Q_total
+    separate_df = len(effect_size) - 1
+    separate_C = separate_sum_Wistar - separate_sum_WistarWistar / separate_sum_Wistar
+    separate_T2 = (separate_Q - separate_df) / separate_C  # sample estimate of tau squared
 
     if separate_T2 < 0:
         separate_T2 = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
-    separate_randomMean = separate_sum_WistarYi / separate_sum_Wistar  # 随机模型元分析后得到的效应平均值
-    separate_randomStdError = (1 / separate_sum_Wistar) ** 0.5  # 随机模型元分析的效应平均值对应的标准错
+    separate_randomMean = separate_sum_WistarYi / separate_sum_Wistar
+    separate_randomVariance = 1 / separate_sum_Wistar
+    separate_randomStdError = (1 / separate_sum_Wistar) ** 0.5
     separate_I2 = ((pooled_Q - pooled_df) / pooled_Q) * 100  # Higgins et al. (2003) proposed using a statistic, I2,
     # the proportion of the observed variance reflects real differences in effect size
     if separate_I2 < 0:
         separate_I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
 
-    # pValue_Q = 1.0 - stats.chi2.cdf(chisquare, freedom_degree)
-    separate_pValue_Q = 1.0 - stats.chi2.cdf(pooled_Q, pooled_df)
+    separate_pValue_Q = 1.0 - stats.chi2.cdf(separate_Q, separate_df)
 
-    d["separate_C"] = pooled_C
     d["separate_mean"] = separate_randomMean
+    d["separate_Variance"] = separate_randomVariance
     d["separate_stdError"] = separate_randomStdError
     d["separate_LL_CI"] = separate_randomMean - 1.96 * separate_randomStdError  # The 95% lower limits
     d["separate_L_CI"] = separate_randomMean + 1.96 * separate_randomStdError  # The 95% upper limits
@@ -460,8 +473,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     # norm.cdf() 返回标准正态累积分布函数值, 20210414 双侧检验时需要增加绝对值符号np.abs
     d["separate_pValue_Z"] = 2 * (1 - norm.cdf(np.abs(separate_randomMean / separate_randomStdError)))
 
-    d["separate_Q"] = pooled_Q
-    d["separate_df"] = pooled_df
+    d["separate_Q"] = separate_Q
+    d["separate_df"] = separate_df
+    d["separate_C"] = separate_C
     d["separate_pValue_Q"] = separate_pValue_Q
     d["separate_I2"] = separate_I2
     d["separate_tau"] = separate_T2 ** 0.5
@@ -470,10 +484,10 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["separate_UL_ndPred"] = separate_randomMean + 1.96 * (separate_T2 ** 0.5)
     # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
-    d["separate_LL_tdPred"] = separate_randomMean - stats.t.ppf(0.975, pooled_df) \
+    d["separate_LL_tdPred"] = separate_randomMean - stats.t.ppf(0.975, separate_df) \
                               * ((separate_T2 + separate_randomStdError * separate_randomStdError) ** 0.5)
     # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
-    d["separate_UL_tdPred"] = separate_randomMean + stats.t.ppf(0.975, pooled_df) \
+    d["separate_UL_tdPred"] = separate_randomMean + stats.t.ppf(0.975, separate_df) \
                               * ((separate_T2 + separate_randomStdError * separate_randomStdError) ** 0.5)
 
     # separate_fixedMean = separate_sum_WiYi / separate_sum_Wi  # 固定模型元分析后得到的效应平均值
