@@ -21,7 +21,6 @@ References:
 #         (1) randomMean：the average of effect sizes;
 #         (2) randomStdError: the standard error corresponding to the average of effect sizes.
 def random_effect_meta_analysis(effect_size, variance):
-
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
     # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
     from scipy import stats
@@ -122,7 +121,6 @@ def random_effect_meta_analysis(effect_size, variance):
 #         (4) the results of Q -test based on analysis of variance, which is identical to Q -test for heterogeneity;
 #         (5) quantify the magnitude of the difference.(page 160 of M.Borenstein et. al [1])
 def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_subgroup):
-
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
     # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
     from scipy import stats
@@ -137,7 +135,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     df_effect_size = pd.DataFrame(dic)
 
-    # pooled all subgroups
+    # pooled all subgroups for fixed effect model
     pooled_sum_Wi = 0
     pooled_sum_WiWi = 0
     pooled_sum_WiYi = 0  # Sum(Wi*Yi), where i ranges from 1 to k, and k is the number of studies of all subgroups
@@ -187,6 +185,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
             sum_WiWi = sum_WiWi + fixed_weight[i] * fixed_weight[i]
             sum_WiYi = sum_WiYi + effect_size[i] * fixed_weight[i]
             sum_WiYiYi = sum_WiYiYi + fixed_weight[i] * effect_size[i] * effect_size[i]
+
+            pooled_sum_Wi = pooled_sum_Wi + fixed_weight[i]
+            pooled_sum_WiYi = pooled_sum_WiYi + effect_size[i] * fixed_weight[i]
 
         Q = sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
         df = study_number - 1
@@ -273,9 +274,19 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
                 (T2 + randomStdError * randomStdError) ** 0.5)
 
         fixedMean = sum_WiYi / sum_Wi  # 固定模型元分析后得到的效应平均值
+        fixedVariance = 1 / sum_Wi
         fixedStdError = (1 / sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
         d[subgroup + '_fixedMean'] = fixedMean
+        d[subgroup + '_fixedVariance'] = fixedVariance
         d[subgroup + '_fixedStdError'] = fixedStdError
+
+    # TODO: M.Borenstein[2009] P155, the rest of summary statistics in Table 19.2 can be computed here.
+    pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # 固定模型元分析后得到的效应平均值
+    pooled_fixedVariance = 1 / pooled_sum_Wi
+    pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
+    d[subgroup + '_pooled__fixedMean'] = pooled_fixedMean
+    d[subgroup + '_pooled_fixedVariance'] = pooled_fixedVariance
+    d[subgroup + '_pooled_fixedStdError'] = pooled_fixedStdError
 
     # compute the pooled estimate tau of summary effect from all subgroups
     tau_squared_within = (pooled_Q - pooled_df) / pooled_C  # sample estimate of tau squared
@@ -335,7 +346,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         elif ((Q_subgroup - df_subgroup) / Q_subgroup) < 0:
             I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
         else:
-            I2 = ((Q_subgroup - df_subgroup) / Q_subgroup) * 100  # Higgins et al. (2003) proposed using a statistic, I2,
+            I2 = ((Q_subgroup - df_subgroup) / Q_subgroup) * 100  # Higgins et al. (2003) proposed using a statistic, I2
 
         pValue_Q = 1.0 - stats.chi2.cdf(Q_subgroup, df_subgroup)
 
@@ -374,7 +385,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     # When there is only one study in the meta-analysis, there is no between-study variance, so it set to 0.
     if study_number == 1:
         pooled_T2 = 0
-    elif(pooled_Q - pooled_df) / pooled_C < 0:     # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
+    elif (pooled_Q - pooled_df) / pooled_C < 0:  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
         pooled_T2 = 0
     else:
         pooled_T2 = (pooled_Q - pooled_df) / pooled_C
@@ -383,7 +394,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     # the proportion of the observed variance reflects real differences in effect size
     if study_number == 1:
         pooled_I2 = 0
-    elif ((pooled_Q - pooled_df) / pooled_Q) < 0: # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
+    elif ((pooled_Q - pooled_df) / pooled_Q) < 0:  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
         pooled_I2 = 0
     else:
         pooled_I2 = ((pooled_Q - pooled_df) / pooled_Q) * 100  # Higgins et al. (2003) proposed using a statistic, I2,
@@ -419,12 +430,6 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_UL_tdPred"] = pooled_randomMean + stats.t.ppf(0.975, pooled_df) \
                             * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
 
-    # pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # 固定模型元分析后得到的效应平均值
-    # pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
-    # d['pooled_fixedMean'] = pooled_fixedMean
-    # d['pooled_fixedStdError'] = pooled_fixedStdError
-
-    print("the pooled_sum_Wi is ", pooled_sum_Wistar)
     # a Q-test based on analysis of variance, which is identical to Z test and Q-test based on heterogeneity
     # Q_total = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wistar
     Q_total = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
@@ -440,7 +445,14 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["Q-test_df_between"] = df_between
     d["Q-test_pValue_Q_between"] = pValue_Q_between
 
-    # Quantify the magnitude of the difference
+    # Quantify the magnitude of the difference and comparing each subgroup in Z-test
+    for s_Z in subgroups:
+
+        remove_s_Z = subgroups
+        remove_s_Z.remove(s_Z)
+        print("the current subgroup is ", s_Z, " the rest of subgroups are ", remove_s_Z,
+              " the all subgroups are ", subgroups)
+
 
     # Compute the separate estimate tau-squared：M.Borenstein[2009] P179 did not report the statistic
     separate_Q = Q_total
@@ -489,11 +501,6 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     d["separate_UL_tdPred"] = separate_randomMean + stats.t.ppf(0.975, separate_df) \
                               * ((separate_T2 + separate_randomStdError * separate_randomStdError) ** 0.5)
-
-    # separate_fixedMean = separate_sum_WiYi / separate_sum_Wi  # 固定模型元分析后得到的效应平均值
-    # separate_fixedStdError = (1 / separate_sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
-    # d['separate_fixedMean'] = separate_fixedMean
-    # d['separate_fixedStdError'] = separate_fixedStdError
 
     return d
 
