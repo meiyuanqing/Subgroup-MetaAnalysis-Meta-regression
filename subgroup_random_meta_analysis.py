@@ -146,14 +146,12 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     pooled_Q_pooled = 0  # used for Q-test for pooled estimate tau
 
-    # combined all subgroups for separated estimate tau
-    separate_sum_Wistar = 0
+    separate_sum_Wistar = 0  # combined all subgroups for separated estimate tau
     separate_sum_WistarWistar = 0
     separate_sum_WistarYi = 0
     separate_sum_WistarYiYi = 0
 
-    # combined all subgroups for pooled estimate tau
-    pooled_sum_Wistar = 0
+    pooled_sum_Wistar = 0  # combined all subgroups for pooled estimate tau
     pooled_sum_WistarWistar = 0
     pooled_sum_WistarYi = 0
     pooled_sum_WistarYiYi = 0
@@ -179,8 +177,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         random_weight = [0 for i in range(study_number)]
         print("the current subgroup is ", subgroup, ". the study_number is ", study_number)
 
-        # prepare for Tau of each subgroup
-        for i in range(study_number):
+        for i in range(study_number):  # prepare for Tau of each subgroup
             if variance[i] == 0:
                 continue
             fixed_weight[i] = 1 / variance[i]
@@ -196,8 +193,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         df = study_number - 1
         C = sum_Wi - sum_WiWi / sum_Wi
 
-        # When there is only one study in the meta-analysis, there is no between-study variance, so it set to 0.
-        if study_number == 1:
+        if study_number == 1:  # Only one study in meta-analysis results in no between-study variance, so it set to 0.
             T2 = 0
         else:
             T2 = (Q - df) / C  # sample estimate of tau squared
@@ -224,28 +220,20 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         df_subgroup = study_number - 1
         C_subgroup = sum_Wistar - sum_WistarWistar / sum_Wistar
 
-        # Q-test for separate estimate tau subgroup random effect meta-analysis
-        pooled_Q_separate = pooled_Q_separate + Q_subgroup
+        pooled_Q_separate = pooled_Q_separate + Q_subgroup  # Q-test for separate estimate tau subgroup random effect
         # pooled_df_separate = pooled_df + df_subgroup
         # pooled_C_separate = pooled_C + C_subgroup
-        # tau-squared-within is computed using fixed effect's Q, df, and c.
-        pooled_Q = pooled_Q + Q
+
+        pooled_Q = pooled_Q + Q  # tau-squared-within is computed using fixed effect's Q, df, and c.
         pooled_df = pooled_df + df
         pooled_C = pooled_C + C
-
-        print("The separate_sum_WistarYiYi value is ", separate_sum_WistarYiYi, ". The separate_sum_WistarYi value is ",
-              separate_sum_WistarYi, ". The separate_sum_Wistar value is ", separate_sum_Wistar,
-              ". The separate_sum_WistarWistar value is ", separate_sum_WistarWistar, ". The Q_subgroup value is ",
-              Q_subgroup, ". The C_subgroup value is ", C_subgroup, "\n. The pooled_Q value is ", pooled_Q,
-              "\n. The pooled_df value is ", pooled_df, "\n. The pooled_C value is ", pooled_C, )
 
         randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup for separate estimate tau
         randomVariance = 1 / sum_Wistar  # variance for average effect size of each subgroup
         randomStdError = (1 / sum_Wistar) ** 0.5  # standard error for average effect size of each subgroup
-        # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
-        # the proportion of the observed variance reflects real differences in effect size
-        if study_number == 1:
-            I2 = 0
+
+        if study_number == 1:  # Only one study in the meta-analysis results in no heterogeneity, so it set to 0.
+            I2 = 0  # the proportion of the observed variance reflects real differences in effect size
         elif ((Q_subgroup - df_subgroup) / Q_subgroup) < 0:
             I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
         else:
@@ -258,48 +246,42 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         d["separate_" + subgroup + "_stdError"] = randomStdError
         d["separate_" + subgroup + "_LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits
         d["separate_" + subgroup + "_UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits
-        # 20210719 adds the 84% CI for the summary effect
-        d["separate_" + subgroup + "_LL_CI_84"] = randomMean - 1.4051 * randomStdError  # The 84% lower limits
+        d["separate_" + subgroup + "_LL_CI_84"] = randomMean - 1.4051 * randomStdError  # The 84% lower limits, 20210719
         d["separate_" + subgroup + "_UL_CI_84"] = randomMean + 1.4051 * randomStdError  # The 84% upper limits
-        # a Z-value to test the null hypothesis that the mean effect is zero;norm.cdf() 返回标准正态累积分布函数值
-        d["separate_" + subgroup + "_ZValue"] = randomMean / randomStdError
+        # a Z-value to test the null hypothesis that the mean effect is zero; norm.cdf() 返回标准正态累积分布函数值,
+        d["separate_" + subgroup + "_ZValue"] = randomMean / randomStdError # 20210414 双侧检验时需要增加绝对值符号np.abs
         d["separate_" + subgroup + "_pValue_Z"] = 2 * (1 - norm.cdf(np.abs(randomMean / randomStdError)))
-        # 20210414 双侧检验时需要增加绝对值符号np.abs
         d["separate_" + subgroup + "_Q"] = Q_subgroup
         d["separate_" + subgroup + "_df"] = df_subgroup
         d["separate_" + subgroup + "_C"] = C_subgroup
         d["separate_" + subgroup + "_pValue_Q"] = pValue_Q
         d["separate_" + subgroup + "_I2"] = I2
         # d["separate_" + subgroup + "_tau"] = T2 ** 0.5
-        # # tau、randomMean 已知情况下的新出现的study的effctsize所落的区间
-        # d["separate_" + subgroup + "_LL_ndPred"] = randomMean - 1.96 * (T2 ** 0.5)
-        # d["separate_" + subgroup + "_UL_ndPred"] = randomMean + 1.96 * (T2 ** 0.5)
-        # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
+        # d["separate_" + subgroup + "_LL_ndPred"] = randomMean - 1.96 * (T2 ** 0.5)  # tau、randomMean 已知情况下的新出现的
+        # d["separate_" + subgroup + "_UL_ndPred"] = randomMean + 1.96 * (T2 ** 0.5)  # study的effect size所落的区间
+        # tau、randomMean 未知情况（估计）下的新出现的study的effect size所落的区间
         # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
         d["separate_" + subgroup + "_LL_tdPred"] = randomMean - stats.t.ppf(0.975, df_subgroup) * (
                 (T2 + randomStdError * randomStdError) ** 0.5)
-        # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
         d["separate_" + subgroup + "_UL_tdPred"] = randomMean + stats.t.ppf(0.975, df_subgroup) * (
                 (T2 + randomStdError * randomStdError) ** 0.5)
 
-        fixedMean = sum_WiYi / sum_Wi  # 固定模型元分析后得到的效应平均值
-        fixedVariance = 1 / sum_Wi
-        fixedStdError = (1 / sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
+        fixedMean = sum_WiYi / sum_Wi  # average effect sizes for fixed model of each subgroup
+        fixedVariance = 1 / sum_Wi  # variance of average effect sizes for fixed model of each subgroup
+        fixedStdError = (1 / sum_Wi) ** 0.5  # standard error of average effect sizes for fixed model of each subgroup
         d[subgroup + '_fixedMean'] = fixedMean
         d[subgroup + '_fixedVariance'] = fixedVariance
         d[subgroup + '_fixedStdError'] = fixedStdError
 
     # TODO: M.Borenstein[2009] P155, the rest of summary statistics in Table 19.2 can be computed here.
-    pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # 固定模型元分析后得到的效应平均值
-    pooled_fixedVariance = 1 / pooled_sum_Wi
-    pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # 固定模型元分析的效应平均值对应的标准错
+    pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # average effect sizes for fixed model of all subgroups
+    pooled_fixedVariance = 1 / pooled_sum_Wi  # variance
+    pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # standard error
     d[subgroup + '_pooled__fixedMean'] = pooled_fixedMean
     d[subgroup + '_pooled_fixedVariance'] = pooled_fixedVariance
     d[subgroup + '_pooled_fixedStdError'] = pooled_fixedStdError
 
     # compute the pooled estimate tau of summary effect from all subgroups
-    print("The pooled_Q value is ", pooled_Q, "\n. The pooled_df value is ", pooled_df,
-          "\n. The pooled_C value is ", pooled_C, )
     tau_squared_within = (pooled_Q - pooled_df) / pooled_C  # sample estimate of tau squared
     if tau_squared_within < 0:
         tau_squared_within = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
@@ -345,19 +327,12 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         # Q-test for pooled estimate tau subgroup random effect meta-analysis
         pooled_Q_pooled = pooled_Q_pooled + Q_subgroup
 
-        print("The separate_sum_WistarYiYi value is ", separate_sum_WistarYiYi, ". The separate_sum_WistarYi value is ",
-              separate_sum_WistarYi, ". The separate_sum_Wistar value is ", separate_sum_Wistar,
-              ". The separate_sum_WistarWistar value is ", separate_sum_WistarWistar, ". The Q_subgroup value is ",
-              Q_subgroup, ". The C_subgroup value is ", C_subgroup)
-
         randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup for separate estimate tau
         randomVariance = 1 / sum_Wistar  # variance for average effect size of each subgroup
         randomStdError = (1 / sum_Wistar) ** 0.5  # standard error for average effect size of each subgroup
 
-        # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
-        # the proportion of the observed variance reflects real differences in effect size
-        if study_number == 1:
-            I2 = 0
+        if study_number == 1:  # Only one study in the meta-analysis process results in no heterogeneity, so it set to 0
+            I2 = 0  # the proportion of the observed variance reflects real differences in effect size
         elif ((Q_subgroup - df_subgroup) / Q_subgroup) < 0:
             I2 = 0  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
         else:
@@ -370,13 +345,11 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         d["pooled_" + subgroup_pooled + "_randomStdError"] = randomStdError
         d["pooled_" + subgroup_pooled + "_LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits
         d["pooled_" + subgroup_pooled + "_UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits
-        # 20210719 adds the 84% CI for the summary effect
         d["pooled_" + subgroup_pooled + "_LL_CI_84"] = randomMean - 1.4051 * randomStdError  # The 84% lower limits
         d["pooled_" + subgroup_pooled + "_UL_CI_84"] = randomMean + 1.4051 * randomStdError  # The 84% upper limits
         # a Z-value to test the null hypothesis that the mean effect is zero;norm.cdf() 返回标准正态累积分布函数值
-        d["pooled_" + subgroup_pooled + "_ZValue"] = randomMean / randomStdError
+        d["pooled_" + subgroup_pooled + "_ZValue"] = randomMean / randomStdError  # 20210414双侧检验时需要增加绝对值符号np.abs
         d["pooled_" + subgroup_pooled + "_pValue_Z"] = 2 * (1 - norm.cdf(np.abs(randomMean / randomStdError)))
-        # 20210414 双侧检验时需要增加绝对值符号np.abs
         d["pooled_" + subgroup_pooled + "_Q"] = Q_subgroup
         d["pooled_" + subgroup_pooled + "_df"] = df_subgroup
         d["pooled_" + subgroup_pooled + "_C"] = C_subgroup
@@ -402,18 +375,15 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     df_pooled = len(effect_size) - 1
     C_pooled = pooled_sum_Wistar - pooled_sum_WistarWistar / pooled_sum_Wistar
 
-    # When there is only one study in the meta-analysis, there is no between-study variance, so it set to 0.
-    if study_number == 1:
+    if study_number == 1:  # Only one study in the meta-analysis results in no between-study variance, so it set to 0.
         pooled_T2 = 0
     elif (Q_pooled - df_pooled) / C_pooled < 0:  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
         pooled_T2 = 0
     else:
         pooled_T2 = (Q_pooled - df_pooled) / C_pooled
 
-    # When there is only one study in the meta-analysis process, there is no heterogeneity, so it set to 0.
-    # the proportion of the observed variance reflects real differences in effect size
-    if study_number == 1:
-        pooled_I2 = 0
+    if study_number == 1:  # Only one study in the meta-analysis process results in no heterogeneity, so it set to 0.
+        pooled_I2 = 0  # the proportion of the observed variance reflects real differences in effect size
     elif ((Q_pooled - df_pooled) / Q_pooled) < 0:  # 20210418，Set to 0 if I2 is less than 0.   M.Borenstein[2009] P110
         pooled_I2 = 0
     else:
@@ -426,12 +396,10 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_stdError"] = pooled_randomStdError
     d["pooled_LL_CI"] = pooled_randomMean - 1.96 * pooled_randomStdError  # The 95% lower limits
     d["pooled_L_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
-    # 20210719 adds the 84% CI for the summary effect
     d["pooled_LL_CI_84"] = pooled_randomMean - 1.4051 * pooled_randomStdError  # The 84% lower limits
     d["pooled_UL_CI_84"] = pooled_randomMean + 1.4051 * pooled_randomStdError  # The 84% upper limits
-    # a Z-value to test the null hypothesis that the mean effect is zero
-    d["pooled_ZValue"] = pooled_randomMean / pooled_randomStdError
-    # norm.cdf() 返回标准正态累积分布函数值, 20210414 双侧检验时需要增加绝对值符号np.abs
+    d["pooled_ZValue"] = pooled_randomMean / pooled_randomStdError    # a Z-value to test the null hypothesis that
+    # the mean effect is zero. norm.cdf() 返回标准正态累积分布函数值, 20210414 双侧检验时需要增加绝对值符号np.abs
     d["pooled_pValue_Z"] = 2 * (1 - norm.cdf(np.abs(pooled_randomMean / pooled_randomStdError)))
     d["pooled_Q"] = Q_pooled
     d["pooled_df"] = df_pooled
@@ -439,14 +407,13 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_pValue_Q"] = pooled_pValue_Q
     d["pooled_I2"] = pooled_I2
     d["pooled_tau"] = pooled_T2 ** 0.5
-    # tau、randomMean 已知情况下的新出现的study的effctsize所落的区间
+    # tau、randomMean 已知情况下的新出现的study的effect size所落的区间
     d["pooled_LL_ndPred"] = pooled_randomMean - 1.96 * (pooled_T2 ** 0.5)
     d["pooled_UL_ndPred"] = pooled_randomMean + 1.96 * (pooled_T2 ** 0.5)
-    # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
+    # tau、randomMean 未知情况（估计）下的新出现的study的effect size所落的区间
     # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
     d["pooled_LL_tdPred"] = pooled_randomMean - stats.t.ppf(0.975, pooled_df) \
                             * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
-    # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     d["pooled_UL_tdPred"] = pooled_randomMean + stats.t.ppf(0.975, pooled_df) \
                             * ((pooled_T2 + pooled_randomStdError * pooled_randomStdError) ** 0.5)
 
@@ -502,36 +469,31 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["separate_stdError"] = separate_randomStdError
     d["separate_LL_CI"] = separate_randomMean - 1.96 * separate_randomStdError  # The 95% lower limits
     d["separate_L_CI"] = separate_randomMean + 1.96 * separate_randomStdError  # The 95% upper limits
-    # 20210719 adds the 84% CI for the summary effect
     d["separate_LL_CI_84"] = separate_randomMean - 1.4051 * separate_randomStdError  # The 84% lower limits
     d["separate_UL_CI_84"] = separate_randomMean + 1.4051 * separate_randomStdError  # The 84% upper limits
-    # a Z-value to test the null hypothesis that the mean effect is zero
-    d["separate_ZValue"] = separate_randomMean / separate_randomStdError
-    # norm.cdf() 返回标准正态累积分布函数值, 20210414 双侧检验时需要增加绝对值符号np.abs
+    d["separate_ZValue"] = separate_randomMean / separate_randomStdError  # a Z-value to test the null hypothesis that
+    # the mean effect is zero. norm.cdf() 返回标准正态累积分布函数值, 20210414 双侧检验时需要增加绝对值符号np.abs
     d["separate_pValue_Z"] = 2 * (1 - norm.cdf(np.abs(separate_randomMean / separate_randomStdError)))
-
     d["separate_Q"] = separate_Q
     d["separate_df"] = separate_df
     d["separate_C"] = separate_C
     d["separate_pValue_Q"] = separate_pValue_Q
     d["separate_I2"] = separate_I2
     d["separate_tau"] = separate_T2 ** 0.5
-    # tau、randomMean 已知情况下的新出现的study的effctsize所落的区间
+    # tau、randomMean 已知情况下的新出现的study的effect size所落的区间
     d["separate_LL_ndPred"] = separate_randomMean - 1.96 * (separate_T2 ** 0.5)
     d["separate_UL_ndPred"] = separate_randomMean + 1.96 * (separate_T2 ** 0.5)
-    # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
+    # tau、randomMean 未知情况（估计）下的新出现的study的effect size所落的区间
     # stats.t.ppf(0.975,df)返回学生t分布单尾alpha=0.025区间点(双尾是alpha=0.05)的函数，它是stats.t.cdf()累积分布函数的逆函数
     d["separate_LL_tdPred"] = separate_randomMean - stats.t.ppf(0.975, separate_df) \
                               * ((separate_T2 + separate_randomStdError * separate_randomStdError) ** 0.5)
-    # tau、randomMean 未知情况（估计）下的新出现的study的effctsize所落的区间
     d["separate_UL_tdPred"] = separate_randomMean + stats.t.ppf(0.975, separate_df) \
                               * ((separate_T2 + separate_randomStdError * separate_randomStdError) ** 0.5)
 
     # Quantify the magnitude of the difference and comparing each subgroup in Z-test P168
     for s_Z in subgroups:
 
-        # exclude the current subgroup
-        non_subgroup = [s_Z]
+        non_subgroup = [s_Z]  # exclude the current subgroup
 
         def fun_1(m):
             return m if m not in non_subgroup else None
