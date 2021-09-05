@@ -113,49 +113,46 @@ def random_effect_meta_analysis(effect_size, variance):
     return d
 
 
-# input: three anonymous arrays, namely effect_size stores each study's effect size, its variance and it subgroup mark.
-# output: the results of subgroup meta-analysis with random effects model, including
-#         (1) randomMean of all subgroup：the average of effect sizes;
+# Inputs: three anonymous arrays, namely effect_size stores each study's effect size, its variance and it subgroup mark.
+# Outputs: the results of subgroup meta-analysis with random effects model, including
+#         (1) randomMean of all subgroup：the average of effect sizes for separated and pooled tau, respectively;
 #         (2) randomStdError of all subgroup: the standard error corresponding to the average of effect sizes;
 #         (3) other summary statistics in page 167 of M.Borenstein et. al [1];
 #         (4) the results of Q -test based on analysis of variance, which is identical to Q -test for heterogeneity;
-#         (5) quantify the magnitude of the difference.(page 160 of M.Borenstein et. al [1])
+#         (5) Z-test of two subgroups, quantify the magnitude of the difference.(page 160 of M.Borenstein et. al [1])
 def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_subgroup):
     from scipy.stats import norm  # norm.cdf() the cumulative normal distribution function in Python
-    # Calculation of p-values based on the chi-square distribution: p_value=1.0-stats.chi2.cdf(chisquare,freedom_degree)
-    from scipy import stats
+    from scipy import stats  # chi-square distribution: p_value=1.0-stats.chi2.cdf(chi-square, freedom_degree)
     import numpy as np
     import pandas as pd
 
-    d = {}  # return a dict of meta-analysis results, including each subgroup, separate, and pooled estimate tau-squared
+    d = {}  # return a dict of results, including each subgroup, separated, and pooled estimate tau-squared
     subgroups = sorted(set(effect_subgroup))
-    # subgroups = sorted(set(subgroup.tolist()))
     print("the subgroups are ", subgroups)
     dic = {"effect_size": effect_size, "effect_size_variance": effect_variance, "effect_size_subgroup": effect_subgroup}
 
     df_effect_size = pd.DataFrame(dic)
 
-    # pooled all subgroups for fixed effect model
-    pooled_sum_Wi = 0
+    pooled_sum_Wi = 0  # pooled all subgroups for fixed effect model
     pooled_sum_WiWi = 0
     pooled_sum_WiYi = 0  # Sum(Wi*Yi), where i ranges from 1 to k, and k is the number of studies of all subgroups
     pooled_sum_WiYiYi = 0  # Sum(Wi*Yi*Yi), where i ranges from 1 to k, and k is the number of studies of all subgroups
 
-    # tau-squared-within is computed using fixed effect's Q, df, and c.
-    pooled_Q = 0
+    pooled_Q = 0  # tau-squared-within is computed using fixed effect's Q, df, and c.
     pooled_df = 0
     pooled_C = 0
 
-    # used for Q-test for separate estimate tau
-    pooled_Q_separate = 0
-    # used for Q-test for pooled estimate tau
-    pooled_Q_pooled = 0
+    pooled_Q_separate = 0  # used for Q-test for separated estimate tau
 
+    pooled_Q_pooled = 0  # used for Q-test for pooled estimate tau
+
+    # combined all subgroups for separated estimate tau
     separate_sum_Wistar = 0
     separate_sum_WistarWistar = 0
     separate_sum_WistarYi = 0
     separate_sum_WistarYiYi = 0
 
+    # combined all subgroups for pooled estimate tau
     pooled_sum_Wistar = 0
     pooled_sum_WistarWistar = 0
     pooled_sum_WistarYi = 0
@@ -240,7 +237,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
               separate_sum_WistarYi, ". The separate_sum_Wistar value is ", separate_sum_Wistar,
               ". The separate_sum_WistarWistar value is ", separate_sum_WistarWistar, ". The Q_subgroup value is ",
               Q_subgroup, ". The C_subgroup value is ", C_subgroup, "\n. The pooled_Q value is ", pooled_Q,
-              "\n. The pooled_df value is ", pooled_df, "\n. The pooled_C value is ", pooled_C,)
+              "\n. The pooled_df value is ", pooled_df, "\n. The pooled_C value is ", pooled_C, )
 
         randomMean = sum_WistarYi / sum_Wistar  # average effect size of each subgroup for separate estimate tau
         randomVariance = 1 / sum_Wistar  # variance for average effect size of each subgroup
@@ -561,10 +558,9 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
             d["Z_test_pooled_" + non_s_Z + "_" + s_Z + "_SE_Diff"] = SE_Diff_star_pooled
             d["Z_test_pooled_" + non_s_Z + "_" + s_Z + "_Z"] = Diff_star_pooled / SE_Diff_star_pooled
             d["Z_test_pooled_" + non_s_Z + "_" + s_Z + "_pValue_Z"] = 2 * (
-                        1 - norm.cdf(np.abs(Diff_star_pooled / SE_Diff_star_pooled)))
+                    1 - norm.cdf(np.abs(Diff_star_pooled / SE_Diff_star_pooled)))
 
         print("this is the end for one comparison")
-
 
     return d
 
