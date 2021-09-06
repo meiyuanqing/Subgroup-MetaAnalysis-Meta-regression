@@ -9,7 +9,7 @@ HomePage : http://github.com/yuanqingmei
 Email : dg1533019@smail.nju.edu.cn
 
 According to M.Borenstein et. al,[1] (p164), perform subgroup meta-analysis using random-effects weights,
-   with a separate estimate of Tau-squared for each subgroup.
+   with a separated and pooled estimate of Tau-squared for each subgroup.
 
 References:
 [1] M.Borenstein, L.V. Hedges, J.P.T. Higgins, H.R. Rothstein. Introduction to meta-analysis, John Wiley & Sons, 2009;
@@ -540,13 +540,13 @@ if __name__ == '__main__':
     FisherZ_effect_size = df[df["metric"] == "LOC"].loc[:, "Fisher_Z"].astype(float)
     FisherZ_variance = df[df["metric"] == "LOC"].loc[:, "Fisher_Z_variance"].astype(float)
     FisherZ_subgroup = df[df["metric"] == "LOC"].loc[:, "subgroup"]
-    # subgroup_results = subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
+    subgroup_results = subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
 
     # P173 Table 19.10
     effect_size_A = [0.11, 0.224, 0.338, 0.451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
     variance_A = [0.01, 0.03, 0.02, 0.015, 0.01, 0.015, 0.02, 0.015, 0.025, 0.012]
     subgroup = ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"]
-    subgroup_results = subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
+    # subgroup_results = subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
     print("the subgroup_results is ", subgroup_results)
     for s in subgroup_results:
         print(s, subgroup_results[s])
