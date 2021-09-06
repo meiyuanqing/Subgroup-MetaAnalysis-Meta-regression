@@ -168,7 +168,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         sum_WistarYi = 0
         sum_WistarYiYi = 0
 
-        effect_size = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
+        effect_size_sub = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
                       "effect_size"].values.tolist()
         variance = df_effect_size[df_effect_size["effect_size_subgroup"] == subgroup].loc[:,
                    "effect_size_variance"].values.tolist()
@@ -183,11 +183,13 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
             fixed_weight[i] = 1 / variance[i]
             sum_Wi = sum_Wi + fixed_weight[i]
             sum_WiWi = sum_WiWi + fixed_weight[i] * fixed_weight[i]
-            sum_WiYi = sum_WiYi + effect_size[i] * fixed_weight[i]
-            sum_WiYiYi = sum_WiYiYi + fixed_weight[i] * effect_size[i] * effect_size[i]
+            sum_WiYi = sum_WiYi + effect_size_sub[i] * fixed_weight[i]
+            sum_WiYiYi = sum_WiYiYi + fixed_weight[i] * effect_size_sub[i] * effect_size_sub[i]
 
             pooled_sum_Wi = pooled_sum_Wi + fixed_weight[i]
-            pooled_sum_WiYi = pooled_sum_WiYi + effect_size[i] * fixed_weight[i]
+            pooled_sum_WiWi = pooled_sum_WiWi + fixed_weight[i] * fixed_weight[i]
+            pooled_sum_WiYi = pooled_sum_WiYi + effect_size_sub[i] * fixed_weight[i]
+            pooled_sum_WiYiYi = pooled_sum_WiYiYi + fixed_weight[i] * effect_size_sub[i] * effect_size_sub[i]
 
         Q = sum_WiYiYi - sum_WiYi * sum_WiYi / sum_Wi
         df = study_number - 1
@@ -207,14 +209,15 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         for i_s in range(study_number):
             sum_Wistar = sum_Wistar + random_weight[i_s]
             sum_WistarWistar = sum_WistarWistar + random_weight[i_s] * random_weight[i_s]
-            sum_WistarYi = sum_WistarYi + random_weight[i_s] * effect_size[i_s]
-            sum_WistarYiYi = sum_WistarYiYi + random_weight[i_s] * effect_size[i_s] * effect_size[i_s]
+            sum_WistarYi = sum_WistarYi + random_weight[i_s] * effect_size_sub[i_s]
+            sum_WistarYiYi = sum_WistarYiYi + random_weight[i_s] * effect_size_sub[i_s] * effect_size_sub[i_s]
 
             # prepared for summary effects of random-effect model within subgroups
             separate_sum_Wistar = separate_sum_Wistar + random_weight[i_s]
             separate_sum_WistarWistar = separate_sum_WistarWistar + random_weight[i_s] * random_weight[i_s]
-            separate_sum_WistarYi = separate_sum_WistarYi + random_weight[i_s] * effect_size[i_s]
-            separate_sum_WistarYiYi = separate_sum_WistarYiYi + random_weight[i_s] * effect_size[i_s] * effect_size[i_s]
+            separate_sum_WistarYi = separate_sum_WistarYi + random_weight[i_s] * effect_size_sub[i_s]
+            separate_sum_WistarYiYi = separate_sum_WistarYiYi \
+                                      + random_weight[i_s] * effect_size_sub[i_s] * effect_size_sub[i_s]
 
         Q_subgroup = sum_WistarYiYi - sum_WistarYi * sum_WistarYi / sum_Wistar
         df_subgroup = study_number - 1
@@ -277,16 +280,27 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     pooled_fixedMean = pooled_sum_WiYi / pooled_sum_Wi  # average effect sizes for fixed model of all subgroups
     pooled_fixedVariance = 1 / pooled_sum_Wi  # variance
     pooled_fixedStdError = (1 / pooled_sum_Wi) ** 0.5  # standard error
-    d[subgroup + '_pooled__fixedMean'] = pooled_fixedMean
-    d[subgroup + '_pooled_fixedVariance'] = pooled_fixedVariance
-    d[subgroup + '_pooled_fixedStdError'] = pooled_fixedStdError
+    pooled_Q_fixed = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wi
+    pooled_C_fixed = pooled_sum_Wi - pooled_sum_WiWi / pooled_sum_Wi
+    pooled_df_fixed = len(effect_size) - 1
+    combined_T2 = (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed
+    combined_I2 = ((pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed) * 100
+    d['combined__fixedMean'] = pooled_fixedMean
+    d['combined_fixedVariance'] = pooled_fixedVariance
+    d['combined_fixedStdError'] = pooled_fixedStdError
+    d['combined_tau_squared'] = combined_T2
+    d['combined_I_squared'] = combined_I2
 
     # compute the pooled estimate tau of summary effect from all subgroups
     tau_squared_within = (pooled_Q - pooled_df) / pooled_C  # sample estimate of tau squared
     if tau_squared_within < 0:
         tau_squared_within = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
 
-    print("the tau_squared_within is ", tau_squared_within)
+    print("the tau_squared_within is ", tau_squared_within, "the pooled_Q_fixed is ", pooled_Q_fixed,
+          "the pooled_df_fixed is ", pooled_df_fixed, "the pooled_C_fixed is ", pooled_C_fixed)
+
+    # compute the R2 P181
+    d['R2'] = 1 - (tau_squared_within / combined_T2)
 
     for subgroup_pooled in subgroups:
 
@@ -540,13 +554,13 @@ if __name__ == '__main__':
     FisherZ_effect_size = df[df["metric"] == "LOC"].loc[:, "Fisher_Z"].astype(float)
     FisherZ_variance = df[df["metric"] == "LOC"].loc[:, "Fisher_Z_variance"].astype(float)
     FisherZ_subgroup = df[df["metric"] == "LOC"].loc[:, "subgroup"]
-    subgroup_results = subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
+    # subgroup_results = subgroup_random_effect_meta_analysis(FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
 
     # P173 Table 19.10
     effect_size_A = [0.11, 0.224, 0.338, 0.451, 0.480, 0.440, 0.492, 0.651, 0.710, 0.740]
     variance_A = [0.01, 0.03, 0.02, 0.015, 0.01, 0.015, 0.02, 0.015, 0.025, 0.012]
     subgroup = ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"]
-    # subgroup_results = subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
+    subgroup_results = subgroup_random_effect_meta_analysis(effect_size_A, variance_A, subgroup)
     print("the subgroup_results is ", subgroup_results)
     for s in subgroup_results:
         print(s, subgroup_results[s])
