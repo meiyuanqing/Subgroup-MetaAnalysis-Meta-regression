@@ -482,7 +482,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["separate_Variance"] = separate_randomVariance
     d["separate_stdError"] = separate_randomStdError
     d["separate_LL_CI"] = separate_randomMean - 1.96 * separate_randomStdError  # The 95% lower limits
-    d["separate_L_CI"] = separate_randomMean + 1.96 * separate_randomStdError  # The 95% upper limits
+    d["separate_UL_CI"] = separate_randomMean + 1.96 * separate_randomStdError  # The 95% upper limits
     d["separate_LL_CI_84"] = separate_randomMean - 1.4051 * separate_randomStdError  # The 84% lower limits
     d["separate_UL_CI_84"] = separate_randomMean + 1.4051 * separate_randomStdError  # The 84% upper limits
     d["separate_ZValue"] = separate_randomMean / separate_randomStdError  # a Z-value to test the null hypothesis that
