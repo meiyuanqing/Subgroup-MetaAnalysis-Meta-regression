@@ -461,7 +461,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["Q-test_pooled_pValue_Q_between"] = pValue_Q_between
 
     # Compute the separate estimate tau-squared：M.Borenstein[2009] P179 did not report the statistic
-    separate_Q = Q_total_pooled
+    separate_Q = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
     separate_df = len(effect_size) - 1
     separate_C = separate_sum_Wistar - separate_sum_WistarWistar / separate_sum_Wistar
     separate_T2 = (separate_Q - separate_df) / separate_C  # sample estimate of tau squared
