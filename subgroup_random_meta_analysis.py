@@ -409,7 +409,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_Variance"] = pooled_randomVariance
     d["pooled_stdError"] = pooled_randomStdError
     d["pooled_LL_CI"] = pooled_randomMean - 1.96 * pooled_randomStdError  # The 95% lower limits
-    d["pooled_L_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
+    d["pooled_UL_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
     d["pooled_LL_CI_84"] = pooled_randomMean - 1.4051 * pooled_randomStdError  # The 84% lower limits
     d["pooled_UL_CI_84"] = pooled_randomMean + 1.4051 * pooled_randomStdError  # The 84% upper limits
     d["pooled_ZValue"] = pooled_randomMean / pooled_randomStdError    # a Z-value to test the null hypothesis that
