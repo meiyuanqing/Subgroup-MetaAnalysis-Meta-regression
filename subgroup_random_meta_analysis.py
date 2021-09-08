@@ -301,6 +301,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     # compute the R2 P181
     d['R2'] = 1 - (tau_squared_within / combined_T2)
+    d['tau_squared_within'] = tau_squared_within
 
     for subgroup_pooled in subgroups:
 
