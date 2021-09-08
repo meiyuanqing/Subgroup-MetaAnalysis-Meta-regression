@@ -213,6 +213,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     # compute the R2 P181
     d['R2'] = 1 - (tau_squared_within / combined_T2)
+    d['tau_squared_within'] = tau_squared_within
 
     for subgroup_pooled in subgroups:
 
@@ -497,7 +498,12 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                      "separate_Q",
                                      "direction_pooled", "Pearson_pooled_tau", "Pearson_pooled_tau_stdError",
                                      "Pearson_pooled_tau_variance", "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
-                                     "pooled_pValue_Z", "pooled_Q"])
+                                     "pooled_pValue_Z", "pooled_Q",
+                                     "Q-test_separate_Q_total", "Q-test_separate_Q_within", "Q-test_separate_Q_between",
+                                     "Q-test_separate_df_between", "Q-test_separate_pValue_Q_between",
+                                     "Q-test_pooled_Q_total", "Q-test_pooled_Q_within", "Q-test_pooled_Q_between",
+                                     "Q-test_pooled_df_between", "Q-test_pooled_pValue_Q_between",
+                                     "tau_squared_within", "tau_squared_total", "combined_I_squared", "R2"])
 
         for metric in metric_names:
 
@@ -527,7 +533,7 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                           - inverse_Fisher_Z(subgroup_results["separate_LL_CI"])) / (1.96 * 2)
 
                 meta_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_UL_CI"])
-                                          - inverse_Fisher_Z(subgroup_results["pooled_LL_CI"])) / (1.96 * 2)
+                                        - inverse_Fisher_Z(subgroup_results["pooled_LL_CI"])) / (1.96 * 2)
                 # adjusted_result = trimAndFill(np.arrady(metaThreshold.loc[:, "EffectSize"]),
                 #                               np.array(metaThreshold.loc[:, "Variance"]), 0)
                 # meta_stdError_adjusted = (inverse_Fisher_Z(adjusted_result["UL_CI"])
@@ -561,8 +567,21 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                          inverse_Fisher_Z(subgroup_results["pooled_LL_CI"]),
                                          inverse_Fisher_Z(subgroup_results["pooled_UL_CI"]),
                                          subgroup_results["pooled_ZValue"], subgroup_results["pooled_pValue_Z"],
-                                         subgroup_results["pooled_Q"]
-                                         ])
+                                         subgroup_results["pooled_Q"],
+                                         subgroup_results["Q-test_separate_Q_total"],
+                                         subgroup_results["Q-test_separate_Q_within"],
+                                         subgroup_results["Q-test_separate_Q_between"],
+                                         subgroup_results["Q-test_separate_df_between"],
+                                         subgroup_results["Q-test_separate_pValue_Q_between"],
+                                         subgroup_results["Q-test_pooled_Q_total"],
+                                         subgroup_results["Q-test_pooled_Q_within"],
+                                         subgroup_results["Q-test_pooled_Q_between"],
+                                         subgroup_results["Q-test_pooled_df_between"],
+                                         subgroup_results["Q-test_pooled_pValue_Q_between"],
+                                         subgroup_results["tau_squared_within"],
+                                         subgroup_results["combined_tau_squared"],
+                                         subgroup_results["combined_I_squared"],
+                                         subgroup_results["R2"]])
 
                 #  print the results of each subgroup
                 for s in subgroup_names:
@@ -572,22 +591,82 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                         if os.path.getsize(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv") == 0:
                             writer_s_Pearson.writerow(["subgroup", "metric", "direction_separated",
                                                        "Pearson_separated_tau", "Pearson_separated_tau_stdError",
-                                                       "Pearson_separated_tau_variance",
-                                                       "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
-                                                       "separate_pValue_Z",
+                                                       "Pearson_separated_tau_variance", "separate_LL_CI",
+                                                       "separate_UL_CI", "separate_ZValue", "separate_pValue_Z",
                                                        "separate_Q",
-                                                       "direction_pooled",
-                                                       "Pearson_pooled_tau", "Pearson_pooled_tau_stdError",
-                                                       "Pearson_pooled_tau_variance",
+                                                       "direction_pooled", "Pearson_pooled_tau",
+                                                       "Pearson_pooled_tau_stdError", "Pearson_pooled_tau_variance",
                                                        "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
-                                                       "pooled_pValue_Z",
-                                                       "pooled_Q"
-                                                       ])
+                                                       "pooled_pValue_Z", "pooled_Q",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
+                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
+                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z"])
+
+                        non_subgroup = [s]  # exclude the current subgroup
+
+                        def fun_1(m):
+                            return m if m not in non_subgroup else None
+
+                        non_s_subgroups = filter(fun_1, subgroup_names)
+
+                        Z_test_results = []
+
+                        for non_s in non_s_subgroups:
+
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
+
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
+                            Z_test_results.append(non_s)
+                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
+
                         meta_s_stdError_separate = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
-                                          - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
+                                                    - inverse_Fisher_Z(
+                                    subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
 
                         meta_s_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"])
-                                          - inverse_Fisher_Z(subgroup_results["pooled_" + s + "_LL_CI"])) / (1.96 * 2)
+                                                  - inverse_Fisher_Z(
+                                    subgroup_results["pooled_" + s + "_LL_CI"])) / (1.96 * 2)
 
                         if subgroup_results["separate_" + s + "_pValue_Q"] > 0.5:
                             direction_s_separate = 0
@@ -620,11 +699,10 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                                    inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"]),
                                                    subgroup_results["pooled_" + s + "_ZValue"],
                                                    subgroup_results["pooled_" + s + "_pValue_Z"],
-                                                   subgroup_results["pooled_" + s + "_Q"]
-                                                   ])
+                                                   subgroup_results["pooled_" + s + "_Q"]] + Z_test_results)
             except Exception as err1:
                 print(err1)
-            break
+            # break
 
 
 if __name__ == '__main__':
