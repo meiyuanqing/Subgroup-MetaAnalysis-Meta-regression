@@ -373,7 +373,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["Q-test_pooled_pValue_Q_between"] = pValue_Q_between
 
     # Compute the separate estimate tau-squared：M.Borenstein[2009] P179 did not report the statistic
-    separate_Q = Q_total_pooled
+    separate_Q = separate_sum_WistarYiYi - separate_sum_WistarYi * separate_sum_WistarYi / separate_sum_Wistar
     separate_df = len(effect_size) - 1
     separate_C = separate_sum_Wistar - separate_sum_WistarWistar / separate_sum_Wistar
     separate_T2 = (separate_Q - separate_df) / separate_C  # sample estimate of tau squared
@@ -570,15 +570,25 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                               newline='') as s_Pearson:
                         writer_s_Pearson = csv.writer(s_Pearson)
                         if os.path.getsize(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv") == 0:
-                            writer_s_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau",
-                                                       "Pearson_separated_tau_stdError",
+                            writer_s_Pearson.writerow(["subgroup", "metric", "direction_separated",
+                                                       "Pearson_separated_tau", "Pearson_separated_tau_stdError",
                                                        "Pearson_separated_tau_variance",
                                                        "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
                                                        "separate_pValue_Z",
-                                                       "separate_Q"])
-                        meta_s_stdError = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
-                                           - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (
-                                                      1.96 * 2)
+                                                       "separate_Q",
+                                                       "direction_pooled",
+                                                       "Pearson_pooled_tau", "Pearson_pooled_tau_stdError",
+                                                       "Pearson_pooled_tau_variance",
+                                                       "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
+                                                       "pooled_pValue_Z",
+                                                       "pooled_Q"
+                                                       ])
+                        meta_s_stdError_separate = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
+                                          - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
+
+                        meta_s_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"])
+                                          - inverse_Fisher_Z(subgroup_results["pooled_" + s + "_LL_CI"])) / (1.96 * 2)
+
                         if subgroup_results["separate_" + s + "_pValue_Q"] > 0.5:
                             direction_s_separate = 0
                         else:
@@ -586,14 +596,32 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                 direction_s_separate = 1
                             else:
                                 direction_s_separate = -1
-                        writer_s_Pearson.writerow([metric, direction_s_separate,
+
+                        if subgroup_results["pooled_" + s + "_pValue_Q"] > 0.5:
+                            direction_s_pooled = 0
+                        else:
+                            if inverse_Fisher_Z(subgroup_results["pooled_" + s + "_mean"]) > 0:
+                                direction_s_pooled = 1
+                            else:
+                                direction_s_pooled = -1
+
+                        writer_s_Pearson.writerow([s, metric, direction_s_separate,
                                                    inverse_Fisher_Z(subgroup_results["separate_" + s + "_mean"]),
-                                                   meta_s_stdError, meta_s_stdError * meta_s_stdError,
+                                                   meta_s_stdError_separate, meta_s_stdError_separate ** 2,
                                                    inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"]),
                                                    inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"]),
                                                    subgroup_results["separate_" + s + "_ZValue"],
                                                    subgroup_results["separate_" + s + "_pValue_Z"],
-                                                   subgroup_results["separate_" + s + "_Q"]])
+                                                   subgroup_results["separate_" + s + "_Q"],
+                                                   direction_s_pooled,
+                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_mean"]),
+                                                   meta_s_stdError_pooled, meta_s_stdError_pooled ** 2,
+                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_LL_CI"]),
+                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"]),
+                                                   subgroup_results["pooled_" + s + "_ZValue"],
+                                                   subgroup_results["pooled_" + s + "_pValue_Z"],
+                                                   subgroup_results["pooled_" + s + "_Q"]
+                                                   ])
             except Exception as err1:
                 print(err1)
             break
