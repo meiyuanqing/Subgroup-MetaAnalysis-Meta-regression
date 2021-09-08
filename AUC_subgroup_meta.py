@@ -321,7 +321,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     d["pooled_Variance"] = pooled_randomVariance
     d["pooled_stdError"] = pooled_randomStdError
     d["pooled_LL_CI"] = pooled_randomMean - 1.96 * pooled_randomStdError  # The 95% lower limits
-    d["pooled_L_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
+    d["pooled_UL_CI"] = pooled_randomMean + 1.96 * pooled_randomStdError  # The 95% upper limits
     d["pooled_LL_CI_84"] = pooled_randomMean - 1.4051 * pooled_randomStdError  # The 84% lower limits
     d["pooled_UL_CI_84"] = pooled_randomMean + 1.4051 * pooled_randomStdError  # The 84% upper limits
     d["pooled_ZValue"] = pooled_randomMean / pooled_randomStdError  # a Z-value to test the null hypothesis that
@@ -494,7 +494,10 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
             writer_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau",
                                      "Pearson_separated_tau_stdError", "Pearson_separated_tau_variance",
                                      "separate_LL_CI", "separate_UL_CI", "separate_ZValue", "separate_pValue_Z",
-                                     "separate_Q"])
+                                     "separate_Q",
+                                     "direction_pooled", "Pearson_pooled_tau", "Pearson_pooled_tau_stdError",
+                                     "Pearson_pooled_tau_variance", "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
+                                     "pooled_pValue_Z", "pooled_Q"])
 
         for metric in metric_names:
 
@@ -520,13 +523,23 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                 for s in subgroup_results:
                     print(s, subgroup_results[s])
 
-                meta_stdError = (inverse_Fisher_Z(subgroup_results["separate_UL_CI"])
-                                 - inverse_Fisher_Z(subgroup_results["separate_LL_CI"])) / (1.96 * 2)
+                meta_stdError_separate = (inverse_Fisher_Z(subgroup_results["separate_UL_CI"])
+                                          - inverse_Fisher_Z(subgroup_results["separate_LL_CI"])) / (1.96 * 2)
 
+                meta_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_UL_CI"])
+                                          - inverse_Fisher_Z(subgroup_results["pooled_LL_CI"])) / (1.96 * 2)
                 # adjusted_result = trimAndFill(np.arrady(metaThreshold.loc[:, "EffectSize"]),
                 #                               np.array(metaThreshold.loc[:, "Variance"]), 0)
                 # meta_stdError_adjusted = (inverse_Fisher_Z(adjusted_result["UL_CI"])
                 #                           - inverse_Fisher_Z(adjusted_result["LL_CI"])) / (1.96 * 2)
+                if subgroup_results["pooled_pValue_Q"] > 0.5:
+                    direction_pooled = 0
+                else:
+                    if inverse_Fisher_Z(subgroup_results["pooled_mean"]) > 0:
+                        direction_pooled = 1
+                    else:
+                        direction_pooled = -1
+
                 if subgroup_results["separate_pValue_Q"] > 0.5:
                     direction_separate = 0
                 else:
@@ -536,12 +549,20 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                         direction_separate = -1
 
                 writer_Pearson.writerow([metric, direction_separate,
-                                         inverse_Fisher_Z(subgroup_results["separate_mean"]), meta_stdError,
-                                         meta_stdError * meta_stdError,
+                                         inverse_Fisher_Z(subgroup_results["separate_mean"]), meta_stdError_separate,
+                                         meta_stdError_separate * meta_stdError_separate,
                                          inverse_Fisher_Z(subgroup_results["separate_LL_CI"]),
                                          inverse_Fisher_Z(subgroup_results["separate_UL_CI"]),
                                          subgroup_results["separate_ZValue"], subgroup_results["separate_pValue_Z"],
-                                         subgroup_results["separate_Q"]])
+                                         subgroup_results["separate_Q"],
+                                         direction_pooled,
+                                         inverse_Fisher_Z(subgroup_results["pooled_mean"]), meta_stdError_pooled,
+                                         meta_stdError_pooled * meta_stdError_pooled,
+                                         inverse_Fisher_Z(subgroup_results["pooled_LL_CI"]),
+                                         inverse_Fisher_Z(subgroup_results["pooled_UL_CI"]),
+                                         subgroup_results["pooled_ZValue"], subgroup_results["pooled_pValue_Z"],
+                                         subgroup_results["pooled_Q"]
+                                         ])
 
                 #  print the results of each subgroup
                 for s in subgroup_names:
@@ -556,7 +577,8 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                                        "separate_pValue_Z",
                                                        "separate_Q"])
                         meta_s_stdError = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
-                                         - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
+                                           - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (
+                                                      1.96 * 2)
                         if subgroup_results["separate_" + s + "_pValue_Q"] > 0.5:
                             direction_s_separate = 0
                         else:
