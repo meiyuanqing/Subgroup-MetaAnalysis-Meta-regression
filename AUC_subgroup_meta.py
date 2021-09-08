@@ -543,6 +543,35 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                          subgroup_results["separate_ZValue"], subgroup_results["separate_pValue_Z"],
                                          subgroup_results["separate_Q"]])
 
+                #  print the results of each subgroup
+                for s in subgroup_names:
+                    with open(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv", 'a+', encoding="utf-8",
+                              newline='') as s_Pearson:
+                        writer_s_Pearson = csv.writer(s_Pearson)
+                        if os.path.getsize(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv") == 0:
+                            writer_s_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau",
+                                                       "Pearson_separated_tau_stdError",
+                                                       "Pearson_separated_tau_variance",
+                                                       "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
+                                                       "separate_pValue_Z",
+                                                       "separate_Q"])
+                        meta_s_stdError = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
+                                         - inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
+                        if subgroup_results["separate_" + s + "_pValue_Q"] > 0.5:
+                            direction_s_separate = 0
+                        else:
+                            if inverse_Fisher_Z(subgroup_results["separate_" + s + "_mean"]) > 0:
+                                direction_s_separate = 1
+                            else:
+                                direction_s_separate = -1
+                        writer_s_Pearson.writerow([metric, direction_s_separate,
+                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_mean"]),
+                                                   meta_s_stdError, meta_s_stdError * meta_s_stdError,
+                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"]),
+                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"]),
+                                                   subgroup_results["separate_" + s + "_ZValue"],
+                                                   subgroup_results["separate_" + s + "_pValue_Z"],
+                                                   subgroup_results["separate_" + s + "_Q"]])
             except Exception as err1:
                 print(err1)
             break
