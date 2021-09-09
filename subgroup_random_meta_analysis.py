@@ -308,7 +308,10 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
           "the pooled_df_fixed is ", pooled_df_fixed, "the pooled_C_fixed is ", pooled_C_fixed)
 
     # compute the R2 P181
-    d['R2'] = 1 - (tau_squared_within / combined_T2)
+    if combined_T2 == 0:
+        d['R2'] = 0
+    else:
+        d['R2'] = 1 - (tau_squared_within / combined_T2)
     d['tau_squared_within'] = tau_squared_within
 
     for subgroup_pooled in subgroups:
