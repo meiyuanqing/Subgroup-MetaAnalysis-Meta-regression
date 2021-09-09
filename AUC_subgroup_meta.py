@@ -40,7 +40,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
 
     d = {}  # return a dict of results, including each subgroup, separated, and pooled estimate tau-squared
     subgroups = sorted(set(effect_subgroup))
-    print("the subgroups are ", subgroups)
+    # print("the subgroups are ", subgroups)
     dic = {"effect_size": effect_size, "effect_size_variance": effect_variance, "effect_size_subgroup": effect_subgroup}
 
     df_effect_size = pd.DataFrame(dic)
@@ -87,7 +87,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         study_number = len(variance)
         fixed_weight = [0 for i in range(study_number)]
         random_weight = [0 for i in range(study_number)]
-        print("the current subgroup is ", subgroup, ". the study_number is ", study_number)
+        # print("the current subgroup is ", subgroup, ". the study_number is ", study_number)
 
         for i in range(study_number):  # prepare for Tau of each subgroup
             if variance[i] == 0:
@@ -116,6 +116,8 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
             T2 = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
 
         for i_s in range(study_number):
+            if variance[i_s] + T2 == 0:
+                continue
             random_weight[i_s] = 1 / (variance[i_s] + T2)
 
         for i_s in range(study_number):
@@ -195,8 +197,15 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     pooled_Q_fixed = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wi
     pooled_C_fixed = pooled_sum_Wi - pooled_sum_WiWi / pooled_sum_Wi
     pooled_df_fixed = len(effect_size) - 1
-    combined_T2 = (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed
-    combined_I2 = ((pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed) * 100
+    if (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed < 0:
+        combined_T2 = 0
+    else:
+        combined_T2 = (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed
+    if (pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed < 0:
+        combined_I2 = 0
+    else:
+        combined_I2 = ((pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed) * 100
+
     d['combined__fixedMean'] = pooled_fixedMean
     d['combined_fixedVariance'] = pooled_fixedVariance
     d['combined_fixedStdError'] = pooled_fixedStdError
@@ -212,12 +221,15 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     #       "the pooled_df_fixed is ", pooled_df_fixed, "the pooled_C_fixed is ", pooled_C_fixed)
 
     # compute the R2 P181
-    d['R2'] = 1 - (tau_squared_within / combined_T2)
+    if combined_T2 == 0:
+        d['R2'] = 0
+    else:
+        d['R2'] = 1 - (tau_squared_within / combined_T2)
     d['tau_squared_within'] = tau_squared_within
 
     for subgroup_pooled in subgroups:
 
-        print("the current subgroup is ", subgroup_pooled)
+        # print("the current subgroup is ", subgroup_pooled)
         sum_Wistar = 0
         sum_WistarWistar = 0
         sum_WistarYi = 0
@@ -229,11 +241,13 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
                    "effect_size_variance"].values.tolist()
         study_number = len(variance)
 
-        print("the study_number is ", study_number, "the effect_size is ", effect_size, "the variance is ", variance)
+        # print("the study_number is ", study_number, "the effect_size is ", effect_size, "the variance is ", variance)
 
         random_weight = [0 for i in range(study_number)]
 
         for i_s in range(study_number):
+            if variance[i_s] + tau_squared_within == 0:
+                continue
             random_weight[i_s] = 1 / (variance[i_s] + tau_squared_within)
 
         for i_s in range(study_number):
@@ -428,7 +442,7 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         non_s_Z_subgroups = filter(fun_1, subgroups)
 
         for non_s_Z in non_s_Z_subgroups:
-            print("the non_s_Z is ", non_s_Z, "the current subgroup is ", s_Z, " the all subgroups are ", subgroups)
+            # print("the non_s_Z is ", non_s_Z, "the current subgroup is ", s_Z, " the all subgroups are ", subgroups)
             # Z-test for separate estimate tau: a Z-value to test the null hypothesis that the mean effect is zero
             Diff_star_separate = d["separate_" + non_s_Z + "_mean"] - d["separate_" + s_Z + "_mean"]
             SE_Diff_star_separate = (d["separate_" + non_s_Z + "_variance"] + d["separate_" + s_Z + "_variance"]) ** 0.5
@@ -462,10 +476,8 @@ def inverse_Fisher_Z(fisher_Z):
 def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgroupMetaAnalysis\\"):
     import os
     import csv
-    import scipy
     import numpy as np
     import pandas as pd
-    from sklearn.metrics import recall_score, precision_score, f1_score, roc_curve, auc, roc_auc_score, confusion_matrix
 
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
@@ -486,10 +498,17 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
 
         metric_names = sorted(set(df.metric.values.tolist()))
 
-        subgroup_names = sorted(set(df.subGroup.values.tolist()))
-        print(subgroup_names)
         if os.path.getsize(working_dir + "AUC_subgroups_MetaAnalysis.csv") == 0:
-            writer_AUC.writerow(["metric"])
+            writer_AUC.writerow(["metric", "AUC_separated_tau", "AUC_separated_tau_stdError",
+                                 "AUC_separated_tau_variance", "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
+                                 "separate_pValue_Z", "separate_Q",
+                                 "AUC_pooled_tau", "AUC_pooled_tau_stdError", "AUC_pooled_tau_variance", "pooled_LL_CI",
+                                 "pooled_UL_CI", "pooled_ZValue", "pooled_pValue_Z", "pooled_Q",
+                                 "Q-test_separate_Q_total", "Q-test_separate_Q_within", "Q-test_separate_Q_between",
+                                 "Q-test_separate_df_between", "Q-test_separate_pValue_Q_between",
+                                 "Q-test_pooled_Q_total", "Q-test_pooled_Q_within", "Q-test_pooled_Q_between",
+                                 "Q-test_pooled_df_between", "Q-test_pooled_pValue_Q_between",
+                                 "tau_squared_within", "tau_squared_total", "combined_I_squared", "R2"])
 
         if os.path.getsize(working_dir + "Pearson_subgroups_MetaAnalysis.csv") == 0:
             writer_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau",
@@ -508,6 +527,9 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
         for metric in metric_names:
 
             print("the current metric is ", metric)
+            # subgroup_names = sorted(set(df.subGroup.values.tolist()))
+            subgroup_names = sorted(set(df[df["metric"] == metric].loc[:, "subGroup"]))
+            print(subgroup_names)
 
             FisherZ_effect_size = df[df["metric"] == metric].loc[:, "Fisher_Z"].astype(float)
             FisherZ_variance = df[df["metric"] == metric].loc[:, "Fisher_Z_variance"].astype(float)
@@ -518,20 +540,35 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
             meta_FisherZ['Variance'] = FisherZ_variance
             meta_FisherZ['Subgroup'] = FisherZ_subgroup
 
+            AUC_effect_size = df[df["metric"] == metric].loc[:, "AUC"].astype(float)
+            AUC_variance = df[df["metric"] == metric].loc[:, "Variance"].astype(float)
+            AUC_subgroup = df[df["metric"] == metric].loc[:, "subGroup"]
+
+            meta_AUC = pd.DataFrame()
+            meta_AUC['EffectSize'] = AUC_effect_size
+            meta_AUC['Variance'] = AUC_variance
+            meta_AUC['Subgroup'] = AUC_subgroup
+
             try:
                 Pearson_results = subgroup_random_effect_meta_analysis(np.array(meta_FisherZ.loc[:, "EffectSize"]),
-                                                                        np.array(meta_FisherZ.loc[:, "Variance"]),
-                                                                        np.array(meta_FisherZ.loc[:, "Subgroup"]))
+                                                                       np.array(meta_FisherZ.loc[:, "Variance"]),
+                                                                       np.array(meta_FisherZ.loc[:, "Subgroup"]))
+
+                AUC_results = subgroup_random_effect_meta_analysis(np.array(meta_AUC.loc[:, "EffectSize"]),
+                                                                   np.array(meta_AUC.loc[:, "Variance"]),
+                                                                   np.array(meta_AUC.loc[:, "Subgroup"]))
                 # d["LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits for the summary effect
                 # d["UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits for the summary effect
-                for s in Pearson_results:
-                    print(s, Pearson_results[s])
+                # for s in Pearson_results:
+                #     print(s, Pearson_results[s])
+                # for s in AUC_results:
+                #     print(s, AUC_results[s])
 
-                meta_stdError_separate = (inverse_Fisher_Z(Pearson_results["separate_UL_CI"])
-                                          - inverse_Fisher_Z(Pearson_results["separate_LL_CI"])) / (1.96 * 2)
+                Pearson_meta_stdError_separate = (inverse_Fisher_Z(Pearson_results["separate_UL_CI"])
+                                                  - inverse_Fisher_Z(Pearson_results["separate_LL_CI"])) / (1.96 * 2)
 
-                meta_stdError_pooled = (inverse_Fisher_Z(Pearson_results["pooled_UL_CI"])
-                                        - inverse_Fisher_Z(Pearson_results["pooled_LL_CI"])) / (1.96 * 2)
+                Pearson_meta_stdError_pooled = (inverse_Fisher_Z(Pearson_results["pooled_UL_CI"])
+                                                - inverse_Fisher_Z(Pearson_results["pooled_LL_CI"])) / (1.96 * 2)
                 # adjusted_result = trimAndFill(np.arrady(metaThreshold.loc[:, "EffectSize"]),
                 #                               np.array(metaThreshold.loc[:, "Variance"]), 0)
                 # meta_stdError_adjusted = (inverse_Fisher_Z(adjusted_result["UL_CI"])
@@ -553,15 +590,15 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                         direction_separate = -1
 
                 writer_Pearson.writerow([metric, direction_separate,
-                                         inverse_Fisher_Z(Pearson_results["separate_mean"]), meta_stdError_separate,
-                                         meta_stdError_separate * meta_stdError_separate,
+                                         inverse_Fisher_Z(Pearson_results["separate_mean"]),
+                                         Pearson_meta_stdError_separate, Pearson_meta_stdError_separate ** 2,
                                          inverse_Fisher_Z(Pearson_results["separate_LL_CI"]),
                                          inverse_Fisher_Z(Pearson_results["separate_UL_CI"]),
                                          Pearson_results["separate_ZValue"], Pearson_results["separate_pValue_Z"],
                                          Pearson_results["separate_Q"],
                                          direction_pooled,
-                                         inverse_Fisher_Z(Pearson_results["pooled_mean"]), meta_stdError_pooled,
-                                         meta_stdError_pooled * meta_stdError_pooled,
+                                         inverse_Fisher_Z(Pearson_results["pooled_mean"]), Pearson_meta_stdError_pooled,
+                                         Pearson_meta_stdError_pooled ** 2,
                                          inverse_Fisher_Z(Pearson_results["pooled_LL_CI"]),
                                          inverse_Fisher_Z(Pearson_results["pooled_UL_CI"]),
                                          Pearson_results["pooled_ZValue"], Pearson_results["pooled_pValue_Z"],
@@ -580,6 +617,29 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                          Pearson_results["combined_tau_squared"],
                                          Pearson_results["combined_I_squared"],
                                          Pearson_results["R2"]])
+
+                writer_AUC.writerow([metric, AUC_results["separate_mean"], AUC_results["separate_stdError"],
+                                     AUC_results["separate_Variance"], AUC_results["separate_LL_CI"],
+                                     AUC_results["separate_UL_CI"], AUC_results["separate_ZValue"],
+                                     AUC_results["separate_pValue_Z"], AUC_results["separate_Q"],
+                                     AUC_results["pooled_mean"], AUC_results["pooled_stdError"],
+                                     AUC_results["pooled_Variance"], AUC_results["pooled_LL_CI"],
+                                     AUC_results["pooled_UL_CI"], AUC_results["pooled_ZValue"],
+                                     AUC_results["pooled_pValue_Z"], AUC_results["pooled_Q"],
+                                     AUC_results["Q-test_separate_Q_total"],
+                                     AUC_results["Q-test_separate_Q_within"],
+                                     AUC_results["Q-test_separate_Q_between"],
+                                     AUC_results["Q-test_separate_df_between"],
+                                     AUC_results["Q-test_separate_pValue_Q_between"],
+                                     AUC_results["Q-test_pooled_Q_total"],
+                                     AUC_results["Q-test_pooled_Q_within"],
+                                     AUC_results["Q-test_pooled_Q_between"],
+                                     AUC_results["Q-test_pooled_df_between"],
+                                     AUC_results["Q-test_pooled_pValue_Q_between"],
+                                     AUC_results["tau_squared_within"],
+                                     AUC_results["combined_tau_squared"],
+                                     AUC_results["combined_I_squared"],
+                                     AUC_results["R2"]])
 
                 #  print the results of each subgroup
                 for s in subgroup_names:
@@ -639,8 +699,10 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                         Z_test_results = []
 
                         for non_s in non_s_subgroups:
-
                             Z_test_results.append(non_s)
+                            # print("the non_s is ", non_s, "the s is ", s, "the Z_test_separate_" + non_s + "_" + s
+                            #       + "_Diff is ")
+                            # print(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
                             Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
                             Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
                             Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
