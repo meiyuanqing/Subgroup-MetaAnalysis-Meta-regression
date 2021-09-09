@@ -204,6 +204,8 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
             T2 = 0  # 20210411，Set to 0 if T2 is less than 0.   M.Borenstein[2009] P114
 
         for i_s in range(study_number):
+            if variance[i_s] + T2 == 0:
+                continue
             random_weight[i_s] = 1 / (variance[i_s] + T2)
 
         for i_s in range(study_number):
@@ -283,8 +285,14 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
     pooled_Q_fixed = pooled_sum_WiYiYi - pooled_sum_WiYi * pooled_sum_WiYi / pooled_sum_Wi
     pooled_C_fixed = pooled_sum_Wi - pooled_sum_WiWi / pooled_sum_Wi
     pooled_df_fixed = len(effect_size) - 1
-    combined_T2 = (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed
-    combined_I2 = ((pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed) * 100
+    if (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed < 0:
+        combined_T2 = 0
+    else:
+        combined_T2 = (pooled_Q_fixed - pooled_df_fixed) / pooled_C_fixed
+    if (pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed < 0:
+        combined_I2 = 0
+    else:
+        combined_I2 = ((pooled_Q_fixed - pooled_df_fixed) / pooled_Q_fixed) * 100
     d['combined__fixedMean'] = pooled_fixedMean
     d['combined_fixedVariance'] = pooled_fixedVariance
     d['combined_fixedStdError'] = pooled_fixedStdError
@@ -322,6 +330,8 @@ def subgroup_random_effect_meta_analysis(effect_size, effect_variance, effect_su
         random_weight = [0 for i in range(study_number)]
 
         for i_s in range(study_number):
+            if variance[i_s] + tau_squared_within == 0:
+                continue
             random_weight[i_s] = 1 / (variance[i_s] + tau_squared_within)
 
         for i_s in range(study_number):
