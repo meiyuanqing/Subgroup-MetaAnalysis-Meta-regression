@@ -513,75 +513,73 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
             FisherZ_variance = df[df["metric"] == metric].loc[:, "Fisher_Z_variance"].astype(float)
             FisherZ_subgroup = df[df["metric"] == metric].loc[:, "subGroup"]
 
-            metaThreshold = pd.DataFrame()
-            metaThreshold['EffectSize'] = FisherZ_effect_size
-            metaThreshold['Variance'] = FisherZ_variance
-            metaThreshold['Subgroup'] = FisherZ_subgroup
-            # print(metric, FisherZ_effect_size, FisherZ_variance, FisherZ_subgroup)
-            # print(metric, np.array(metaThreshold.loc[:, "EffectSize"]), np.array(metaThreshold.loc[:, "Variance"]),
-            #       np.array(metaThreshold.loc[:, "Subgroup"]))
+            meta_FisherZ = pd.DataFrame()
+            meta_FisherZ['EffectSize'] = FisherZ_effect_size
+            meta_FisherZ['Variance'] = FisherZ_variance
+            meta_FisherZ['Subgroup'] = FisherZ_subgroup
+
             try:
-                subgroup_results = subgroup_random_effect_meta_analysis(np.array(metaThreshold.loc[:, "EffectSize"]),
-                                                                        np.array(metaThreshold.loc[:, "Variance"]),
-                                                                        np.array(metaThreshold.loc[:, "Subgroup"]))
+                Pearson_results = subgroup_random_effect_meta_analysis(np.array(meta_FisherZ.loc[:, "EffectSize"]),
+                                                                        np.array(meta_FisherZ.loc[:, "Variance"]),
+                                                                        np.array(meta_FisherZ.loc[:, "Subgroup"]))
                 # d["LL_CI"] = randomMean - 1.96 * randomStdError  # The 95% lower limits for the summary effect
                 # d["UL_CI"] = randomMean + 1.96 * randomStdError  # The 95% upper limits for the summary effect
-                for s in subgroup_results:
-                    print(s, subgroup_results[s])
+                for s in Pearson_results:
+                    print(s, Pearson_results[s])
 
-                meta_stdError_separate = (inverse_Fisher_Z(subgroup_results["separate_UL_CI"])
-                                          - inverse_Fisher_Z(subgroup_results["separate_LL_CI"])) / (1.96 * 2)
+                meta_stdError_separate = (inverse_Fisher_Z(Pearson_results["separate_UL_CI"])
+                                          - inverse_Fisher_Z(Pearson_results["separate_LL_CI"])) / (1.96 * 2)
 
-                meta_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_UL_CI"])
-                                        - inverse_Fisher_Z(subgroup_results["pooled_LL_CI"])) / (1.96 * 2)
+                meta_stdError_pooled = (inverse_Fisher_Z(Pearson_results["pooled_UL_CI"])
+                                        - inverse_Fisher_Z(Pearson_results["pooled_LL_CI"])) / (1.96 * 2)
                 # adjusted_result = trimAndFill(np.arrady(metaThreshold.loc[:, "EffectSize"]),
                 #                               np.array(metaThreshold.loc[:, "Variance"]), 0)
                 # meta_stdError_adjusted = (inverse_Fisher_Z(adjusted_result["UL_CI"])
                 #                           - inverse_Fisher_Z(adjusted_result["LL_CI"])) / (1.96 * 2)
-                if subgroup_results["pooled_pValue_Q"] > 0.5:
+                if Pearson_results["pooled_pValue_Q"] > 0.5:
                     direction_pooled = 0
                 else:
-                    if inverse_Fisher_Z(subgroup_results["pooled_mean"]) > 0:
+                    if inverse_Fisher_Z(Pearson_results["pooled_mean"]) > 0:
                         direction_pooled = 1
                     else:
                         direction_pooled = -1
 
-                if subgroup_results["separate_pValue_Q"] > 0.5:
+                if Pearson_results["separate_pValue_Q"] > 0.5:
                     direction_separate = 0
                 else:
-                    if inverse_Fisher_Z(subgroup_results["separate_mean"]) > 0:
+                    if inverse_Fisher_Z(Pearson_results["separate_mean"]) > 0:
                         direction_separate = 1
                     else:
                         direction_separate = -1
 
                 writer_Pearson.writerow([metric, direction_separate,
-                                         inverse_Fisher_Z(subgroup_results["separate_mean"]), meta_stdError_separate,
+                                         inverse_Fisher_Z(Pearson_results["separate_mean"]), meta_stdError_separate,
                                          meta_stdError_separate * meta_stdError_separate,
-                                         inverse_Fisher_Z(subgroup_results["separate_LL_CI"]),
-                                         inverse_Fisher_Z(subgroup_results["separate_UL_CI"]),
-                                         subgroup_results["separate_ZValue"], subgroup_results["separate_pValue_Z"],
-                                         subgroup_results["separate_Q"],
+                                         inverse_Fisher_Z(Pearson_results["separate_LL_CI"]),
+                                         inverse_Fisher_Z(Pearson_results["separate_UL_CI"]),
+                                         Pearson_results["separate_ZValue"], Pearson_results["separate_pValue_Z"],
+                                         Pearson_results["separate_Q"],
                                          direction_pooled,
-                                         inverse_Fisher_Z(subgroup_results["pooled_mean"]), meta_stdError_pooled,
+                                         inverse_Fisher_Z(Pearson_results["pooled_mean"]), meta_stdError_pooled,
                                          meta_stdError_pooled * meta_stdError_pooled,
-                                         inverse_Fisher_Z(subgroup_results["pooled_LL_CI"]),
-                                         inverse_Fisher_Z(subgroup_results["pooled_UL_CI"]),
-                                         subgroup_results["pooled_ZValue"], subgroup_results["pooled_pValue_Z"],
-                                         subgroup_results["pooled_Q"],
-                                         subgroup_results["Q-test_separate_Q_total"],
-                                         subgroup_results["Q-test_separate_Q_within"],
-                                         subgroup_results["Q-test_separate_Q_between"],
-                                         subgroup_results["Q-test_separate_df_between"],
-                                         subgroup_results["Q-test_separate_pValue_Q_between"],
-                                         subgroup_results["Q-test_pooled_Q_total"],
-                                         subgroup_results["Q-test_pooled_Q_within"],
-                                         subgroup_results["Q-test_pooled_Q_between"],
-                                         subgroup_results["Q-test_pooled_df_between"],
-                                         subgroup_results["Q-test_pooled_pValue_Q_between"],
-                                         subgroup_results["tau_squared_within"],
-                                         subgroup_results["combined_tau_squared"],
-                                         subgroup_results["combined_I_squared"],
-                                         subgroup_results["R2"]])
+                                         inverse_Fisher_Z(Pearson_results["pooled_LL_CI"]),
+                                         inverse_Fisher_Z(Pearson_results["pooled_UL_CI"]),
+                                         Pearson_results["pooled_ZValue"], Pearson_results["pooled_pValue_Z"],
+                                         Pearson_results["pooled_Q"],
+                                         Pearson_results["Q-test_separate_Q_total"],
+                                         Pearson_results["Q-test_separate_Q_within"],
+                                         Pearson_results["Q-test_separate_Q_between"],
+                                         Pearson_results["Q-test_separate_df_between"],
+                                         Pearson_results["Q-test_separate_pValue_Q_between"],
+                                         Pearson_results["Q-test_pooled_Q_total"],
+                                         Pearson_results["Q-test_pooled_Q_within"],
+                                         Pearson_results["Q-test_pooled_Q_between"],
+                                         Pearson_results["Q-test_pooled_df_between"],
+                                         Pearson_results["Q-test_pooled_pValue_Q_between"],
+                                         Pearson_results["tau_squared_within"],
+                                         Pearson_results["combined_tau_squared"],
+                                         Pearson_results["combined_I_squared"],
+                                         Pearson_results["R2"]])
 
                 #  print the results of each subgroup
                 for s in subgroup_names:
@@ -599,37 +597,37 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                                        "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
                                                        "pooled_pValue_Z", "pooled_Q",
                                                        "non_s_name", "Z_test_separate_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
-                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "Z_test_separate_" + s + "_SE_Diff",
+                                                       "Z_test_separate_" + s + "_Z",
+                                                       "Z_test_separate_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_pooled_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "Z_test_pooled_" + s + "_Z",
+                                                       "Z_test_pooled_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_separate_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
-                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "Z_test_separate_" + s + "_SE_Diff",
+                                                       "Z_test_separate_" + s + "_Z",
+                                                       "Z_test_separate_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_pooled_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "Z_test_pooled_" + s + "_Z",
+                                                       "Z_test_pooled_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_separate_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
-                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "Z_test_separate_" + s + "_SE_Diff",
+                                                       "Z_test_separate_" + s + "_Z",
+                                                       "Z_test_separate_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_pooled_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z",
+                                                       "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "Z_test_pooled_" + s + "_Z",
+                                                       "Z_test_pooled_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_separate_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_separate_" + s + "_Z",
-                                                       "non_s_name", "Z_test_separate_" + s + "_pValue_Z",
+                                                       "Z_test_separate_" + s + "_SE_Diff",
+                                                       "Z_test_separate_" + s + "_Z",
+                                                       "Z_test_separate_" + s + "_pValue_Z",
                                                        "non_s_name", "Z_test_pooled_" + s + "_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_SE_Diff",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_Z",
-                                                       "non_s_name", "Z_test_pooled_" + s + "_pValue_Z"])
+                                                       "Z_test_pooled_" + s + "_SE_Diff",
+                                                       "Z_test_pooled_" + s + "_Z",
+                                                       "Z_test_pooled_" + s + "_pValue_Z"])
 
                         non_subgroup = [s]  # exclude the current subgroup
 
@@ -643,63 +641,57 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                         for non_s in non_s_subgroups:
 
                             Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
+                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
+                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
+                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
 
                             Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(subgroup_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
+                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
+                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
+                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
 
-                        meta_s_stdError_separate = (inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"])
+                        meta_s_stdError_separate = (inverse_Fisher_Z(Pearson_results["separate_" + s + "_UL_CI"])
                                                     - inverse_Fisher_Z(
-                                    subgroup_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
+                                    Pearson_results["separate_" + s + "_LL_CI"])) / (1.96 * 2)
 
-                        meta_s_stdError_pooled = (inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"])
+                        meta_s_stdError_pooled = (inverse_Fisher_Z(Pearson_results["pooled_" + s + "_UL_CI"])
                                                   - inverse_Fisher_Z(
-                                    subgroup_results["pooled_" + s + "_LL_CI"])) / (1.96 * 2)
+                                    Pearson_results["pooled_" + s + "_LL_CI"])) / (1.96 * 2)
 
-                        if subgroup_results["separate_" + s + "_pValue_Q"] > 0.5:
+                        if Pearson_results["separate_" + s + "_pValue_Q"] > 0.5:
                             direction_s_separate = 0
                         else:
-                            if inverse_Fisher_Z(subgroup_results["separate_" + s + "_mean"]) > 0:
+                            if inverse_Fisher_Z(Pearson_results["separate_" + s + "_mean"]) > 0:
                                 direction_s_separate = 1
                             else:
                                 direction_s_separate = -1
 
-                        if subgroup_results["pooled_" + s + "_pValue_Q"] > 0.5:
+                        if Pearson_results["pooled_" + s + "_pValue_Q"] > 0.5:
                             direction_s_pooled = 0
                         else:
-                            if inverse_Fisher_Z(subgroup_results["pooled_" + s + "_mean"]) > 0:
+                            if inverse_Fisher_Z(Pearson_results["pooled_" + s + "_mean"]) > 0:
                                 direction_s_pooled = 1
                             else:
                                 direction_s_pooled = -1
 
                         writer_s_Pearson.writerow([s, metric, direction_s_separate,
-                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_mean"]),
+                                                   inverse_Fisher_Z(Pearson_results["separate_" + s + "_mean"]),
                                                    meta_s_stdError_separate, meta_s_stdError_separate ** 2,
-                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_LL_CI"]),
-                                                   inverse_Fisher_Z(subgroup_results["separate_" + s + "_UL_CI"]),
-                                                   subgroup_results["separate_" + s + "_ZValue"],
-                                                   subgroup_results["separate_" + s + "_pValue_Z"],
-                                                   subgroup_results["separate_" + s + "_Q"],
+                                                   inverse_Fisher_Z(Pearson_results["separate_" + s + "_LL_CI"]),
+                                                   inverse_Fisher_Z(Pearson_results["separate_" + s + "_UL_CI"]),
+                                                   Pearson_results["separate_" + s + "_ZValue"],
+                                                   Pearson_results["separate_" + s + "_pValue_Z"],
+                                                   Pearson_results["separate_" + s + "_Q"],
                                                    direction_s_pooled,
-                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_mean"]),
+                                                   inverse_Fisher_Z(Pearson_results["pooled_" + s + "_mean"]),
                                                    meta_s_stdError_pooled, meta_s_stdError_pooled ** 2,
-                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_LL_CI"]),
-                                                   inverse_Fisher_Z(subgroup_results["pooled_" + s + "_UL_CI"]),
-                                                   subgroup_results["pooled_" + s + "_ZValue"],
-                                                   subgroup_results["pooled_" + s + "_pValue_Z"],
-                                                   subgroup_results["pooled_" + s + "_Q"]] + Z_test_results)
+                                                   inverse_Fisher_Z(Pearson_results["pooled_" + s + "_LL_CI"]),
+                                                   inverse_Fisher_Z(Pearson_results["pooled_" + s + "_UL_CI"]),
+                                                   Pearson_results["pooled_" + s + "_ZValue"],
+                                                   Pearson_results["pooled_" + s + "_pValue_Z"],
+                                                   Pearson_results["pooled_" + s + "_Q"]] + Z_test_results)
             except Exception as err1:
                 print(err1)
             # break
