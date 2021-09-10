@@ -499,10 +499,11 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
         metric_names = sorted(set(df.metric.values.tolist()))
 
         if os.path.getsize(working_dir + "AUC_subgroups_MetaAnalysis.csv") == 0:
-            writer_AUC.writerow(["metric", "AUC_separated_tau", "AUC_separated_tau_stdError",
+            writer_AUC.writerow(["metric", "AUC_separated_tau_mean", "AUC_separated_tau_stdError",
                                  "AUC_separated_tau_variance", "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
                                  "separate_pValue_Z", "separate_Q",
-                                 "AUC_pooled_tau", "AUC_pooled_tau_stdError", "AUC_pooled_tau_variance", "pooled_LL_CI",
+                                 "AUC_pooled_tau_mean", "AUC_pooled_tau_stdError", "AUC_pooled_tau_variance",
+                                 "pooled_LL_CI",
                                  "pooled_UL_CI", "pooled_ZValue", "pooled_pValue_Z", "pooled_Q",
                                  "Q-test_separate_Q_total", "Q-test_separate_Q_within", "Q-test_separate_Q_between",
                                  "Q-test_separate_df_between", "Q-test_separate_pValue_Q_between",
@@ -511,11 +512,11 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                  "tau_squared_within", "tau_squared_total", "combined_I_squared", "R2"])
 
         if os.path.getsize(working_dir + "Pearson_subgroups_MetaAnalysis.csv") == 0:
-            writer_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau",
+            writer_Pearson.writerow(["metric", "direction_separated", "Pearson_separated_tau_mean",
                                      "Pearson_separated_tau_stdError", "Pearson_separated_tau_variance",
                                      "separate_LL_CI", "separate_UL_CI", "separate_ZValue", "separate_pValue_Z",
                                      "separate_Q",
-                                     "direction_pooled", "Pearson_pooled_tau", "Pearson_pooled_tau_stdError",
+                                     "direction_pooled", "Pearson_pooled_tau_mean", "Pearson_pooled_tau_stdError",
                                      "Pearson_pooled_tau_variance", "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
                                      "pooled_pValue_Z", "pooled_Q",
                                      "Q-test_separate_Q_total", "Q-test_separate_Q_within", "Q-test_separate_Q_between",
@@ -644,15 +645,18 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                 #  print the results of each subgroup
                 for s in subgroup_names:
                     with open(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv", 'a+', encoding="utf-8",
-                              newline='') as s_Pearson:
+                              newline='') as s_Pearson, \
+                            open(working_dir + "AUC_" + s + "_subgroup_MetaAnalysis.csv", 'a+', encoding="utf-8",
+                                 newline='') as s_AUC:
                         writer_s_Pearson = csv.writer(s_Pearson)
+                        writer_s_AUC = csv.writer(s_AUC)
                         if os.path.getsize(working_dir + "Pearson_" + s + "_subgroup_MetaAnalysis.csv") == 0:
                             writer_s_Pearson.writerow(["subgroup", "metric", "direction_separated",
-                                                       "Pearson_separated_tau", "Pearson_separated_tau_stdError",
+                                                       "Pearson_separated_tau_mean", "Pearson_separated_tau_stdError",
                                                        "Pearson_separated_tau_variance", "separate_LL_CI",
                                                        "separate_UL_CI", "separate_ZValue", "separate_pValue_Z",
                                                        "separate_Q",
-                                                       "direction_pooled", "Pearson_pooled_tau",
+                                                       "direction_pooled", "Pearson_pooled_tau_mean",
                                                        "Pearson_pooled_tau_stdError", "Pearson_pooled_tau_variance",
                                                        "pooled_LL_CI", "pooled_UL_CI", "pooled_ZValue",
                                                        "pooled_pValue_Z", "pooled_Q",
@@ -689,6 +693,47 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                                        "Z_test_pooled_" + s + "_Z",
                                                        "Z_test_pooled_" + s + "_pValue_Z"])
 
+                        if os.path.getsize(working_dir + "AUC_" + s + "_subgroup_MetaAnalysis.csv") == 0:
+                            writer_s_AUC.writerow(["subgroup", "metric", "AUC_separated_tau_mean",
+                                                   "AUC_separated_tau_stdError", "AUC_separated_tau_variance",
+                                                   "separate_LL_CI", "separate_UL_CI", "separate_ZValue",
+                                                   "separate_pValue_Z", "separate_Q",
+                                                   "AUC_pooled_tau_mean", "AUC_pooled_tau_stdError",
+                                                   "AUC_pooled_tau_variance", "pooled_LL_CI", "pooled_UL_CI",
+                                                   "pooled_ZValue", "pooled_pValue_Z", "pooled_Q",
+                                                   "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                   "Z_test_separate_" + s + "_SE_Diff",
+                                                   "Z_test_separate_" + s + "_Z",
+                                                   "Z_test_separate_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                   "Z_test_pooled_" + s + "_SE_Diff",
+                                                   "Z_test_pooled_" + s + "_Z",
+                                                   "Z_test_pooled_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                   "Z_test_separate_" + s + "_SE_Diff",
+                                                   "Z_test_separate_" + s + "_Z",
+                                                   "Z_test_separate_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                   "Z_test_pooled_" + s + "_SE_Diff",
+                                                   "Z_test_pooled_" + s + "_Z",
+                                                   "Z_test_pooled_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                   "Z_test_separate_" + s + "_SE_Diff",
+                                                   "Z_test_separate_" + s + "_Z",
+                                                   "Z_test_separate_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                   "Z_test_pooled_" + s + "_SE_Diff",
+                                                   "Z_test_pooled_" + s + "_Z",
+                                                   "Z_test_pooled_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_separate_" + s + "_Diff",
+                                                   "Z_test_separate_" + s + "_SE_Diff",
+                                                   "Z_test_separate_" + s + "_Z",
+                                                   "Z_test_separate_" + s + "_pValue_Z",
+                                                   "non_s_name", "Z_test_pooled_" + s + "_Diff",
+                                                   "Z_test_pooled_" + s + "_SE_Diff",
+                                                   "Z_test_pooled_" + s + "_Z",
+                                                   "Z_test_pooled_" + s + "_pValue_Z"])
+
                         non_subgroup = [s]  # exclude the current subgroup
 
                         def fun_1(m):
@@ -696,23 +741,36 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
 
                         non_s_subgroups = filter(fun_1, subgroup_names)
 
-                        Z_test_results = []
+                        Z_test_Pearson = []
+                        Z_test_AUC = []
 
                         for non_s in non_s_subgroups:
-                            Z_test_results.append(non_s)
+                            Z_test_Pearson.append(non_s)
                             # print("the non_s is ", non_s, "the s is ", s, "the Z_test_separate_" + non_s + "_" + s
                             #       + "_Diff is ")
                             # print(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
-                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
-                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
-                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
-                            Z_test_results.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
 
-                            Z_test_results.append(non_s)
-                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
-                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
-                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
-                            Z_test_results.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
+                            Z_test_Pearson.append(non_s)
+                            Z_test_Pearson.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
+                            Z_test_Pearson.append(Pearson_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
+
+                            Z_test_AUC.append(non_s)
+                            Z_test_AUC.append(AUC_results["Z_test_separate_" + non_s + "_" + s + "_Diff"])
+                            Z_test_AUC.append(AUC_results["Z_test_separate_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_AUC.append(AUC_results["Z_test_separate_" + non_s + "_" + s + "_Z"])
+                            Z_test_AUC.append(AUC_results["Z_test_separate_" + non_s + "_" + s + "_pValue_Z"])
+
+                            Z_test_AUC.append(non_s)
+                            Z_test_AUC.append(AUC_results["Z_test_pooled_" + non_s + "_" + s + "_Diff"])
+                            Z_test_AUC.append(AUC_results["Z_test_pooled_" + non_s + "_" + s + "_SE_Diff"])
+                            Z_test_AUC.append(AUC_results["Z_test_pooled_" + non_s + "_" + s + "_Z"])
+                            Z_test_AUC.append(AUC_results["Z_test_pooled_" + non_s + "_" + s + "_pValue_Z"])
 
                         meta_s_stdError_separate = (inverse_Fisher_Z(Pearson_results["separate_" + s + "_UL_CI"])
                                                     - inverse_Fisher_Z(
@@ -753,7 +811,24 @@ def AUC_subgroup_meta_analysis(working_dir="F:\\NJU\\subMeta\\experiments\\subgr
                                                    inverse_Fisher_Z(Pearson_results["pooled_" + s + "_UL_CI"]),
                                                    Pearson_results["pooled_" + s + "_ZValue"],
                                                    Pearson_results["pooled_" + s + "_pValue_Z"],
-                                                   Pearson_results["pooled_" + s + "_Q"]] + Z_test_results)
+                                                   Pearson_results["pooled_" + s + "_Q"]] + Z_test_Pearson)
+
+                        writer_s_AUC.writerow([s, metric, AUC_results["separate_" + s + "_mean"],
+                                               AUC_results["separate_" + s + "_stdError"],
+                                               AUC_results["separate_" + s + "_variance"],
+                                               AUC_results["separate_" + s + "_LL_CI"],
+                                               AUC_results["separate_" + s + "_UL_CI"],
+                                               AUC_results["separate_" + s + "_ZValue"],
+                                               AUC_results["separate_" + s + "_pValue_Z"],
+                                               AUC_results["separate_" + s + "_Q"],
+                                               AUC_results["pooled_" + s + "_mean"],
+                                               AUC_results["pooled_" + s + "_randomStdError"],
+                                               AUC_results["pooled_" + s + "_variance"],
+                                               AUC_results["pooled_" + s + "_LL_CI"],
+                                               AUC_results["pooled_" + s + "_UL_CI"],
+                                               AUC_results["pooled_" + s + "_ZValue"],
+                                               AUC_results["pooled_" + s + "_pValue_Z"],
+                                               AUC_results["pooled_" + s + "_Q"]] + Z_test_AUC)
             except Exception as err1:
                 print(err1)
             # break
